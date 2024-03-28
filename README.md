@@ -3,7 +3,7 @@
 | Student's name | SCIPER |
 | -------------- | ------ |
 | Mohamed Amine Ben Ahmed | 300371 |
-| Daniel Baicu | 369808 |
+| Daniel-Mihai Baciu | 369808 |
 | Frederik Gerard de Vries | 369939 |
 
 [Milestone 1](#milestone-1) • [Milestone 2](#milestone-2) • [Milestone 3](#milestone-3)
