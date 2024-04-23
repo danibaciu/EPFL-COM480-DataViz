@@ -1,91 +1,102 @@
-// Width and height of the map
-const width = 960, height = 600;
+// Set the dimensions to fill the screen
+const width = window.innerWidth, height = window.innerHeight;
 
 // Append the SVG object to the body of the page
-const svg = d3.select("#map")
+const svgContainer = d3.select("#map")
     .append("svg")
     .attr("width", width)
     .attr("height", height)
-    .call(d3.zoom().on("zoom", function (event) {
+    .call(d3.zoom().on("zoom", (event) => {
         svg.attr("transform", event.transform);
-    }))
-    .append("g");
+    }));
+
+const svg = svgContainer.append("g");
 
 // Map projection
 const projection = d3.geoMercator()
-    .scale(150)
-    .center([0, 20])
+    .scale((width - 3) / (2 * Math.PI)) // Adjust the scale
     .translate([width / 2, height / 2]);
 
 // Create a scale for the colors
 const colorScale = d3.scaleQuantize()
-    .domain([0, 1])
+    .domain([0, 100000000])  // Example domain for population, adjust based on actual data
     .range(d3.schemeBlues[9]);
 
 // Load external data
-d3.json("data/world.geojson").then(function(data) {
+Promise.all([
+    d3.json("map/world.geojson"),
+    d3.csv("data/filtered_df.csv")
+]).then(function([geoData, energyData]) {
+    // Process the energy data
+    const processedData = energyData.map(d => ({
+        country: d.country,
+        year: +d.year,
+        population: +d.population,
+        gdp: +d.gdp
+    }));
 
-    // Draw the map
-    svg.selectAll("path")
-        .data(data.features)
-        .enter()
-        .append("path")
-        .attr("fill", d => colorScale(d.properties.developmentIndex || 0))
-        .attr("d", d3.geoPath().projection(projection))
-        .style("stroke", "black")
-        .on("mouseover", function(event, d) {
-            d3.select(this).attr("fill", "orange");
-            showTooltip(event, d.properties.name + " - Index: " + (d.properties.developmentIndex || "N/A"));
-        })
-        .on("mouseout", function(event, d) {
-            d3.select(this).attr("fill", colorScale(d.properties.developmentIndex || 0));
-            hideTooltip();
-        })
-        .on("click", function(event, d) {
-            updateInfoPanel(d.properties);
+    let currentYear = 2000;  // Start from the year 2000
+    let currentMetric = 'population';
+
+    function updateMap(year, metric) {
+        const yearData = processedData.filter(d => d.year === year);
+
+        // Join the geo data with the energy data
+        const data = geoData.features.map(geo => {
+            const energy = yearData.find(p => p.country === geo.properties.name);
+            return {
+                ...geo,
+                properties: { ...geo.properties, ...energy }
+            };
         });
 
-    // Add a legend
-    const legend = svg.append("g")
-        .attr("transform", "translate(50,40)");
-
-    legend.selectAll("rect")
-        .data(colorScale.range().map(color => {
-            const d = colorScale.invertExtent(color);
-            if (d[0] == null) d[0] = colorScale.domain()[0];
-            if (d[1] == null) d[1] = colorScale.domain()[1];
-            return d;
-        }))
-        .enter().append("rect")
-        .attr("height", 8)
-        .attr("x", (d, i) => i * 30)
-        .attr("y", 0)
-        .attr("width", 30)
-        .attr("fill", d => colorScale(d[0]));
-
-    // Add tooltip
-    const tooltip = d3.select("body").append("div")
-        .attr("class", "tooltip")
-        .style("opacity", 0);
-
-    function showTooltip(event, text) {
-        tooltip.transition()
-            .duration(200)
-            .style("opacity", .9);
-        tooltip.html(text)
-            .style("left", (event.pageX) + "px")
-            .style("top", (event.pageY - 28) + "px");
+        svg.selectAll("path")
+            .data(data)
+            .join("path")
+            .attr("fill", d => d.properties[metric] ? colorScale(d.properties[metric]) : "#ccc")
+            .attr("d", d3.geoPath().projection(projection))
+            .style("stroke", "black")
+            .on("mouseover", function(event, d) {
+                d3.select(this).style("stroke-width", 2).style("stroke", "orange");
+                showTooltip(event, `${d.properties.name} - ${metric}: ${d.properties[metric] || "N/A"}`);
+            })
+            .on("mouseout", function(event, d) {
+                d3.select(this).style("stroke-width", 1).style("stroke", "black");
+                hideTooltip();
+            });
     }
 
-    function hideTooltip() {
-        tooltip.transition()
-            .duration(500)
-            .style("opacity", 0);
-    }
+    // Slider for year selection
+    d3.select("#year-slider").on("input", function() {
+        currentYear = +this.value;
+        d3.select("#year-display").text(`Year: ${currentYear}`);
+        updateMap(currentYear, currentMetric);
+    });
 
-    function updateInfoPanel(properties) {
-        // Implement this function to update information panel
-        console.log("Country selected:", properties.name);
-    }
+    // Dropdown for metric selection
+    d3.select("#metric-selector").on("change", function(event) {
+        currentMetric = this.value;
+        updateMap(currentYear, currentMetric);
+    });
+
+    // Initialize the map
+    updateMap(currentYear, currentMetric);
 });
 
+// Tooltip functions
+function showTooltip(event, text) {
+    const tooltip = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("position", "absolute")
+        .style("opacity", 0)
+        .html(text)
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY - 28) + "px")
+        .transition()
+        .duration(200)
+        .style("opacity", 1);
+}
+
+function hideTooltip() {
+    d3.select(".tooltip").remove();
+}

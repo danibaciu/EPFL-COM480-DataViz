@@ -8,9 +8,15 @@
 </head>
 <body>
     <div id="map"></div>
+    <div id="controls">
+        <input type="range" id="year-slider" min="2000" max="2020" value="2000">
+        <div id="year-display">Year: 2000</div>
+        <select id="metric-selector">
+            <option value="population">Population</option>
+            <option value="gdp">GDP</option>
+        </select>
+    </div>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
-
-
