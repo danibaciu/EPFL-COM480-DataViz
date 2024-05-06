@@ -152,36 +152,6 @@ function drawCountryMap(properties, modal, geoData) {
         return d.properties.name === countryName;
     });
 
-    // Find largest landmass of country (to exclude French Guyana, etc)
-    // let coords = filteredFeatures[0].geometry.coordinates
-    // let largestLandmass = [0, null];
-
-    // coords.forEach(landmass => {
-    //     let maxX = Number.NEGATIVE_INFINITY;
-    //     let maxY = Number.NEGATIVE_INFINITY;
-    //     let minX = Number.POSITIVE_INFINITY;
-    //     let minY = Number.POSITIVE_INFINITY;
-            
-    //     let lm = landmass.length > 1 ? landmass : landmass[0];
-        
-    //     // Find the maximum and minimum X and Y coordinates
-    //     for (const [x, y] of lm) {
-    //         maxX = Math.max(maxX, x);
-    //         minX = Math.min(minX, x);
-    //         maxY = Math.max(maxY, y);
-    //         minY = Math.min(minY, y);
-    //     }
-
-    //     let w = (maxX - minX)
-    //     let h = (maxY - minY);
-    //     if(w * h > largestLandmass[0]){
-    //         let centerX = (maxX + minX) / 2;
-    //         let centerY = (maxY + minY) / 2;
-    //         largestLandmass = [w * h, [centerX, centerY], [w, h], lm];
-    //     }
-    // });
-
-
     // Project onto a unit projection first
     // As suggested by Mike Bostock: https://stackoverflow.com/a/14691788/2988879
     var projection = d3.geoMercator()
