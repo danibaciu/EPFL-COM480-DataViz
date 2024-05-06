@@ -71,7 +71,7 @@ Promise.all([
                 hideTooltip();
             })
             .on("click", function(event, d) {
-                showCountryModal(d.properties);
+                showCountryModal(d.properties, geoData);
             });
     }
 
@@ -109,7 +109,7 @@ function hideTooltip() {
     d3.select(".tooltip").remove();
 }
 
-function showCountryModal(properties) {
+function showCountryModal(properties, geoData) {
     d3.selectAll(".modal-background").remove();
 
     const modalBackground = d3.select("body").append("div")
@@ -133,27 +133,84 @@ function showCountryModal(properties) {
     svgContainer.style("filter", "blur(8px)");
 
     // Load and display the detailed country map
-    drawCountryMap(properties, modal);
+    drawCountryMap(properties, modal, geoData);
 
 }
 
-function drawCountryMap(properties, modal) {
-    const countryName = properties.name.toLowerCase();
+function drawCountryMap(properties, modal, geoData) {
+    const countryName = properties.name;
+    // const countryName = properties.name.toLowerCase();
     const mapContainer = modal.append("div").attr("class", "map-container");
-    const mapSvg = mapContainer.append("svg");
+    const w = 440,
+        h = 300
+    const mapSvg = mapContainer.append("svg")
+        .attr("width", w)
+        .attr("height", h);
 
-    d3.json(`map/${countryName}.geojson`).then(function(countryGeoJson) {
-        const projection = d3.geoMercator().fitSize([300, 300], countryGeoJson);
-        const path = d3.geoPath().projection(projection);
-        mapSvg.selectAll("path")
-            .data(countryGeoJson.features)
-            .enter()
-            .append("path")
-            .attr("d", path)
-            .attr("fill", "#cccccc")
-            .attr("stroke", "#000")
-            .attr("stroke-width", 1);
+    // Filter data
+    const filteredFeatures = geoData.features.filter(function(d){
+        return d.properties.name === countryName;
     });
+
+    // Find largest landmass of country (to exclude French Guyana, etc)
+    // let coords = filteredFeatures[0].geometry.coordinates
+    // let largestLandmass = [0, null];
+
+    // coords.forEach(landmass => {
+    //     let maxX = Number.NEGATIVE_INFINITY;
+    //     let maxY = Number.NEGATIVE_INFINITY;
+    //     let minX = Number.POSITIVE_INFINITY;
+    //     let minY = Number.POSITIVE_INFINITY;
+            
+    //     let lm = landmass.length > 1 ? landmass : landmass[0];
+        
+    //     // Find the maximum and minimum X and Y coordinates
+    //     for (const [x, y] of lm) {
+    //         maxX = Math.max(maxX, x);
+    //         minX = Math.min(minX, x);
+    //         maxY = Math.max(maxY, y);
+    //         minY = Math.min(minY, y);
+    //     }
+
+    //     let w = (maxX - minX)
+    //     let h = (maxY - minY);
+    //     if(w * h > largestLandmass[0]){
+    //         let centerX = (maxX + minX) / 2;
+    //         let centerY = (maxY + minY) / 2;
+    //         largestLandmass = [w * h, [centerX, centerY], [w, h], lm];
+    //     }
+    // });
+
+
+    // Project onto a unit projection first
+    // As suggested by Mike Bostock: https://stackoverflow.com/a/14691788/2988879
+    var projection = d3.geoMercator()
+        .scale(1)
+        .translate([0, 0]);
+    
+    var path = d3.geoPath()
+        .projection(projection);
+    
+    // Compute the bounds of the region, then derive scaling & translation factor
+    var b = path.bounds(filteredFeatures[0]),
+        s = .95 / Math.max((b[1][0] - b[0][0]) / w, (b[1][1] - b[0][1]) / h),
+        t = [(w - s * (b[1][0] + b[0][0])) / 2, (h - s * (b[1][1] + b[0][1])) / 2];
+    
+    projection
+        .scale(s)
+        .translate(t);
+
+    // Draw the map
+    mapSvg.append("g")
+        .selectAll("path")
+        .data(filteredFeatures)
+        .enter()
+        .append("path")
+        .attr("fill", "grey")
+        .attr("d", d3.geoPath()
+            .projection(projection)
+        )
+        .style("stroke", "none");
 }
 
 function drawPlots(properties, modal) {
