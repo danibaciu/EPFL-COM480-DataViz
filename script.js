@@ -31,8 +31,9 @@ const colorScale = d3.scaleQuantize()
 // Load external data
 Promise.all([
     d3.json("map/world.geojson"),
-    d3.csv("data/filtered_df.csv")
-]).then(function([geoData, energyData]) {
+    d3.csv("data/filtered_df.csv"),
+    d3.csv("data/cities.csv")
+]).then(function([geoData, energyData, cityData]) {
     // Process the energy data
     const processedData = energyData.map(d => ({
         country: d.country,
@@ -71,7 +72,7 @@ Promise.all([
                 hideTooltip();
             })
             .on("click", function(event, d) {
-                showCountryModal(d.properties);
+                showCountryModal(d.properties, cityData);
             });
     }
 
@@ -109,7 +110,7 @@ function hideTooltip() {
     d3.select(".tooltip").remove();
 }
 
-function showCountryModal(properties) {
+function showCountryModal(properties, cityData) {
     d3.selectAll(".modal-background").remove();
 
     const modalBackground = d3.select("body").append("div")
@@ -133,11 +134,11 @@ function showCountryModal(properties) {
     svgContainer.style("filter", "blur(8px)");
 
     // Load and display the detailed country map
-    drawCountryMap(properties, modal);
+    drawCountryMap(properties, modal, cityData);
 
 }
 
-function drawCountryMap(properties, modal) {
+function drawCountryMap(properties, modal, cityData) {
     const countryName = properties.name.toLowerCase();
     const mapContainer = modal.append("div").attr("class", "map-container");
     const w = 440,
@@ -145,6 +146,9 @@ function drawCountryMap(properties, modal) {
     const mapSvg = mapContainer.append("svg")
         .attr("width", w)
         .attr("height", h);
+
+    const countryCities = cityData.filter(d => d.country === properties.name);
+    console.log(countryCities);
 
     let fn = "map/countries/" + countryName.replaceAll(" ", "_") + ".json";
     Promise.all([
@@ -157,6 +161,49 @@ function drawCountryMap(properties, modal) {
             .append("path")
             .attr("d", path(countryData))
             .attr("fill", "grey");
+
+        //
+        var Tooltip = mapContainer
+            .append("div")
+            .style("display", "none")
+            .style("position", "absolute")
+            .style("background-color", "white")
+            .style("border", "solid")
+            .style("border-width", "2px")
+            .style("border-radius", "5px")
+            .style("padding", "5px");
+        
+        var onMouseMove = function(event) {
+            Tooltip.style("display", "block");
+            d3.select(this).attr("r", 7)
+            if (typeof event !== 'undefined') {
+                Tooltip.style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY + 10) + "px");
+            }   
+        };
+        
+        var onMouseLeave = function() {
+            Tooltip.style("display", "none");
+            d3.select(this).attr("r", 5)
+        };
+
+        var onMouseOver = function(d) {
+            Tooltip.html("City: " + d3.select(this).attr("data-city-name"));
+        }
+
+        // Append a circle for each city
+        countryCities.forEach(city => {
+            console.log(city.city_name)
+            mapSvg.append("circle")
+                .attr("cx", projection([city.longitude, city.latitude])[0])
+                .attr("cy", projection([city.longitude, city.latitude])[1])
+                .attr("r", 5)
+                .style("fill", "black")
+                .attr("data-city-name", city.city_name)
+                .on("mouseover", onMouseOver)
+                .on("mousemove", onMouseMove)
+                .on("mouseleave", onMouseLeave);
+            });
     });
 }
 
