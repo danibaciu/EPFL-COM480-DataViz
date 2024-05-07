@@ -148,7 +148,6 @@ function drawCountryMap(properties, modal, cityData) {
         .attr("height", h);
 
     const countryCities = cityData.filter(d => d.country === properties.name);
-    console.log(countryCities);
 
     let fn = "map/countries/" + countryName.replaceAll(" ", "_") + ".json";
     Promise.all([
@@ -193,7 +192,6 @@ function drawCountryMap(properties, modal, cityData) {
 
         // Append a circle for each city
         countryCities.forEach(city => {
-            console.log(city.city_name)
             mapSvg.append("circle")
                 .attr("cx", projection([city.longitude, city.latitude])[0])
                 .attr("cy", projection([city.longitude, city.latitude])[1])
