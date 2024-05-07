@@ -146,8 +146,10 @@ function drawCountryMap(properties, modal) {
         .attr("width", w)
         .attr("height", h);
 
+    let fn = "map/countries/" + countryName.replaceAll(" ", "_") + ".json";
+    console.log(fn);
     Promise.all([
-        d3.json("map/countries/" + countryName.replace(" ", "_") + ".json")
+        d3.json(fn)
     ]).then(function([countryData]) {
         var projection = d3.geoMercator();
         var path = d3.geoPath().projection(projection);
