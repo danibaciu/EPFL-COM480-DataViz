@@ -71,7 +71,7 @@ Promise.all([
                 hideTooltip();
             })
             .on("click", function(event, d) {
-                showCountryModal(d.properties, geoData);
+                showCountryModal(d.properties);
             });
     }
 
@@ -109,7 +109,7 @@ function hideTooltip() {
     d3.select(".tooltip").remove();
 }
 
-function showCountryModal(properties, geoData) {
+function showCountryModal(properties) {
     d3.selectAll(".modal-background").remove();
 
     const modalBackground = d3.select("body").append("div")
@@ -133,13 +133,12 @@ function showCountryModal(properties, geoData) {
     svgContainer.style("filter", "blur(8px)");
 
     // Load and display the detailed country map
-    drawCountryMap(properties, modal, geoData);
+    drawCountryMap(properties, modal);
 
 }
 
-function drawCountryMap(properties, modal, geoData) {
-    const countryName = properties.name;
-    // const countryName = properties.name.toLowerCase();
+function drawCountryMap(properties, modal) {
+    const countryName = properties.name.toLowerCase();
     const mapContainer = modal.append("div").attr("class", "map-container");
     const w = 440,
         h = 300
@@ -147,40 +146,17 @@ function drawCountryMap(properties, modal, geoData) {
         .attr("width", w)
         .attr("height", h);
 
-    // Filter data
-    const filteredFeatures = geoData.features.filter(function(d){
-        return d.properties.name === countryName;
+    Promise.all([
+        d3.json("map/countries/" + countryName.replace(" ", "_") + ".json")
+    ]).then(function([countryData]) {
+        var projection = d3.geoMercator();
+        var path = d3.geoPath().projection(projection);
+        projection.fitSize([w,h],countryData);
+        mapSvg
+            .append("path")
+            .attr("d", path(countryData))
+            .attr("fill", "grey");
     });
-
-    // Project onto a unit projection first
-    // As suggested by Mike Bostock: https://stackoverflow.com/a/14691788/2988879
-    var projection = d3.geoMercator()
-        .scale(1)
-        .translate([0, 0]);
-    
-    var path = d3.geoPath()
-        .projection(projection);
-    
-    // Compute the bounds of the region, then derive scaling & translation factor
-    var b = path.bounds(filteredFeatures[0]),
-        s = .95 / Math.max((b[1][0] - b[0][0]) / w, (b[1][1] - b[0][1]) / h),
-        t = [(w - s * (b[1][0] + b[0][0])) / 2, (h - s * (b[1][1] + b[0][1])) / 2];
-    
-    projection
-        .scale(s)
-        .translate(t);
-
-    // Draw the map
-    mapSvg.append("g")
-        .selectAll("path")
-        .data(filteredFeatures)
-        .enter()
-        .append("path")
-        .attr("fill", "grey")
-        .attr("d", d3.geoPath()
-            .projection(projection)
-        )
-        .style("stroke", "none");
 }
 
 function drawPlots(properties, modal) {
