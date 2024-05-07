@@ -147,7 +147,6 @@ function drawCountryMap(properties, modal) {
         .attr("height", h);
 
     let fn = "map/countries/" + countryName.replaceAll(" ", "_") + ".json";
-    console.log(fn);
     Promise.all([
         d3.json(fn)
     ]).then(function([countryData]) {
