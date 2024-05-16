@@ -32,8 +32,9 @@ const colorScale = d3.scaleQuantize()
 Promise.all([
     d3.json("map/world.geojson"),
     d3.csv("data/filtered_df.csv"),
-    d3.csv("data/cities.csv")
-]).then(function ([geoData, energyData, cityData]) {
+    d3.csv("data/cities.csv"),
+    d3.csv("data/weather-aggregated.csv")
+]).then(function ([geoData, energyData, cityData, weatherData]) {
     // Process the energy data
     const processedData = energyData.map(d => ({
         country: d.country,
@@ -98,7 +99,7 @@ Promise.all([
                 hideTooltip();
             })
             .on("click", function (event, d) {
-                showCountryModal(d.properties, cityData);
+                showCountryModal(d.properties, cityData, weatherData);
             });
     }
 
@@ -136,7 +137,7 @@ function hideTooltip() {
     d3.select(".tooltip").remove();
 }
 
-function showCountryModal(properties, cityData) {
+function showCountryModal(properties, cityData, weatherData) {
     d3.selectAll(".modal-background").remove();
 
     const modalBackground = d3.select("body").append("div")
@@ -251,7 +252,7 @@ function showCountryModal(properties, cityData) {
         .attr("class", "map-container");
 
     // Load and display the detailed country map
-    drawCountryMap(properties, mapContainer, cityData);
+    drawCountryMap(properties, mapContainer, cityData, weatherData);
 
     // Bottom section for the plot
     const plotContainer = modal.append("div")
@@ -311,7 +312,7 @@ function showCountryModal(properties, cityData) {
     svgContainer.style("filter", "blur(8px)");
 }
 
-function drawCountryMap(properties, container, cityData) {
+function drawCountryMap(properties, container, cityData, weatherData) {
     const countryName = properties.name.toLowerCase();
     const mapSvg = container.append("svg")
         .attr("width", "100%")
@@ -325,10 +326,27 @@ function drawCountryMap(properties, container, cityData) {
     ]).then(function ([countryData]) {
         var projection = d3.geoMercator();
         var path = d3.geoPath().projection(projection);
-        projection.fitSize([container.node().clientWidth, container.node().clientHeight], countryData);
-        mapSvg
+
+        // Compute the actual height/width, taking padding into account
+        const parentComputedStyle = window.getComputedStyle(container.node());
+        const paddingHor = parseFloat(parentComputedStyle.paddingLeft) + parseFloat(parentComputedStyle.paddingRight);
+        const paddingVert = parseFloat(parentComputedStyle.paddingTop) + parseFloat(parentComputedStyle.paddingBottom);
+
+        const effWidth = container.node().clientWidth - paddingHor;
+        const effHeight = container.node().clientHeight - paddingVert;
+        projection.fitSize([effWidth, effHeight], countryData);
+
+        mapSvg.append("defs").append("clipPath")
+            .attr("id", "map-clip")
             .append("path")
-            .attr("d", path(countryData))
+            .attr("d", path(countryData));
+        
+        var mapGroup = mapSvg.append("g")
+            .attr("clip-path", "url(#map-clip)");
+
+        mapGroup.append("path")
+            .datum(countryData)
+            .attr("d", path)
             .attr("fill", "grey");
 
         var Tooltip = container
@@ -360,10 +378,13 @@ function drawCountryMap(properties, container, cityData) {
         };
 
         // Append a circle for each city
+        coords = []
         countryCities.forEach(city => {
+            const projectedCoords = projection([city.longitude, city.latitude])
+            coords.push(projectedCoords)
             mapSvg.append("circle")
-                .attr("cx", projection([city.longitude, city.latitude])[0])
-                .attr("cy", projection([city.longitude, city.latitude])[1])
+                .attr("cx", projectedCoords[0])
+                .attr("cy", projectedCoords[1])
                 .attr("r", 5)
                 .style("fill", "black")
                 .attr("data-city-name", city.city_name)
@@ -371,6 +392,29 @@ function drawCountryMap(properties, container, cityData) {
                 .on("mousemove", onMouseMove)
                 .on("mouseleave", onMouseLeave);
         });
+
+        // Add the voronoi diagram on top
+        const delaunay = d3.Delaunay.from(coords);
+        const voronoi = delaunay.voronoi([0, 0, effWidth, effHeight]);
+
+        var test = function (d, i){
+            const stationData = weatherData.filter(d => d.station_id == countryCities[i].station_id);
+
+            // TODO: for now just pick 2018 data
+            const yearData = stationData.filter(d => d.date == "2018");
+
+            var t = yearData[0]["avg_temp_c"]
+            var hue = 30 + 240 * (30 - t) / 60;
+            return 'hsl(' + [hue, '70%', '50%'] + ')'
+        }
+
+        mapGroup.selectAll(".voronoi")
+            .data(coords)
+            .enter().append("path")
+            .attr("class", "voronoi")
+            .attr("d", (d, i) => voronoi.renderCell(i))
+            .style("fill", (d, i) => test(d, i))
+            .style("stroke", "blue");
     });
 }
 
