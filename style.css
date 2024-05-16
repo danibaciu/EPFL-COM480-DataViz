@@ -1,3 +1,10 @@
+/* Reset some default browser styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
 body, html {
     margin: 0;
     padding: 0;
@@ -5,6 +12,7 @@ body, html {
     height: 100%;
     overflow: hidden;
     font-family: 'Arial', sans-serif;
+    background-color: #f5f5f5; /* Light grey background */
 }
 
 #map {
@@ -86,35 +94,213 @@ body, html {
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000; 
-    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
 }
 
 .modal {
     background-color: #fff;
     padding: 20px;
     border-radius: 8px;
+    width: 70%;
+    height: 90%;
     display: flex;
     flex-direction: column;
-    z-index: 20;
-    max-width: 80%;
-    max-height: 80%;
-    overflow-y: auto;
-    display: grid;
-    grid-template-columns: 1fr 1fr; 
+    overflow: hidden;
     z-index: 1001;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
 }
 
-
-#country-map-container, #gdp-plot-container, #population-plot-container {
+.top-container {
+    display: flex;
+    flex: 1 1 auto;
+    height: calc(66% - 10px); /* Top two-thirds */
     width: 100%;
-    min-height: 300px; 
-    margin: 10px;
+    margin-bottom: 10px;
 }
 
-#country-map-container svg, 
-#gdp-plot-container svg, 
-#population-plot-container svg {
+.selection-container {
+    flex: 1;
+    padding: 20px;
+    border-right: 1px solid #ddd;
+    background-color: #fafafa; /* Light grey background */
+    border-radius: 8px 0 0 8px;
+}
+
+.selection-container h1 {
+    font-size: 24px;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+#year-range-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+#year-range-container label {
+    font-size: 14px;
+    color: #555;
+    margin-right: 10px;
+}
+
+#year-range-container input {
+    width: 80px;
+    padding: 5px;
+    margin-right: 20px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+#feature-selector {
+    height: 150px; /* Fixed height for the feature selector */
+    width: 100%;
+    border: 1px solid #ddd;
+    overflow-y: scroll;
+    background-color: #fff;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 20px;
+}
+
+#feature-selector h3 {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.feature-option {
+    padding: 5px;
+    cursor: pointer;
+    user-select: none;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.feature-option:hover {
+    background-color: #f0f0f0;
+}
+
+.feature-option.selected {
+    background-color: #2c3e50;
+    color: white;
+}
+
+#formula-container {
+    margin-top: 20px;
+}
+
+#formula-input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 14px;
+}
+
+.add-formula-button {
+    margin-top: 10px;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    background-color: #2c3e50;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.add-formula-button:hover {
+    background-color: #1a252f;
+}
+
+#formula-list-container {
+    margin-top: 20px;
+}
+
+#formula-list-container h3 {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+#formula-list {
+    height: 50px;
+    overflow-y: scroll;
+    border: 1px solid #ddd;
+    padding: 10px;
+    background-color: #fff;
+    border-radius: 4px;
+}
+
+.formula-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.formula-item input {
+    margin-right: 10px;
+}
+
+.map-container {
+    flex: 1;
+    padding: 10px;
+    background-color: #fff;
+    border-radius: 0 8px 8px 0;
+    border: 1px solid #ddd;
+}
+
+.plot-container {
+    height: 34%; /* Bottom third */
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+#plot-area {
+    flex: 1;
     width: 100%;
     height: 100%;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #fff;
+    padding: 10px;
+}
+
+.button-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.plot-button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    background-color: #2c3e50;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    font-size: 16px;
+    margin: 5px 0;
+    transition: background-color 0.2s;
+}
+
+.plot-button:hover {
+    background-color: #1a252f;
+}
+
+.tooltip {
+    position: absolute;
+    background: #fff;
+    border: 1px solid #ddd;
+    padding: 5px;
+    pointer-events: none;
+    z-index: 10;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
