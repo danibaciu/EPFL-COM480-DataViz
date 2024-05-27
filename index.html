@@ -10,6 +10,8 @@
 </head>
 <body>
     <div id="map"></div>
+    <div id="treemapHolder"></div>
+
     <div id="controls">
         <input type="range" id="year-slider" min="2000" max="2020" value="2000">
         <div id="year-display">Year: 2000</div>
@@ -17,6 +19,21 @@
             <option value="population">Population</option>
             <option value="gdp">GDP</option>
         </select>
+    </div>
+
+    <div class="switch-card">
+        <div class="switch-container" id="switchContainer">
+            <input class="three-way-selector" type="radio" id="mercator" name="switch" checked>
+            <label for="mercator" class="switch-label">Mercator</label>
+
+            <input class="three-way-selector" type="radio" id="globe" name="switch">
+            <label for="globe" class="switch-label">Globe</label>
+
+            <input class="three-way-selector" type="radio" id="treemap" name="switch">
+            <label for="treemap" class="switch-label">Tree Map</label>
+
+            <div class="highlighter" id="highlighter"></div>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>

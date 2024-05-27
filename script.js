@@ -1,16 +1,54 @@
 // Set the dimensions to fill the screen
 const width = window.innerWidth, height = window.innerHeight;
 
+// Start the page from the mercator view. Globe has issues if loaded immediately.
+document.getElementById('mercator').checked = true;
+
+// Fix selector highlighter width at the top of the page
+const switchContainer = document.getElementById('switchContainer');
+const highlighter = document.getElementById('highlighter');
+const switchLabels = switchContainer.querySelectorAll('.switch-label');
+
+function setHighlighterWidth() {
+    const checkedInput = switchContainer.querySelector('input[name="switch"]:checked');
+    const checkedLabelWidth = checkedInput.nextElementSibling.offsetWidth;
+    highlighter.style.width = checkedLabelWidth + 'px';
+}
+
+function setHighlighterPosition() {
+    const checkedInput = switchContainer.querySelector('input[name="switch"]:checked');
+    const index = Array.from(checkedInput.parentElement.querySelectorAll('input')).indexOf(checkedInput);
+    let offset = 0;
+    for (let i = 0; i < index; i++) {
+        offset += switchLabels[i].offsetWidth;
+    }
+    highlighter.style.left = offset + 'px';
+}
+
+// Update the highlighter width on load
+setHighlighterWidth();
+setHighlighterPosition();
+
+// function mercatorZoom(event) {
+//     svg.attr("transform", event.transform);
+// };
 // Append the SVG object to the body of the page
 const svgContainer = d3.select("#map")
     .append("svg")
     .attr("width", width)
     .attr("height", height)
-    .call(d3.zoom().on("zoom", (event) => {
-        svg.attr("transform", event.transform);
-    }));
+    // .call(d3.zoom().on("zoom", mercatorZoom));
+    
 
 const svg = svgContainer.append("g");
+
+// Append Treemap SVG object
+const svgTreemapContainer = d3.select("#treemapHolder")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+const treemapSvg = svgTreemapContainer.append("g");
 
 // Define ocean background
 svg.append("rect")
@@ -19,9 +57,17 @@ svg.append("rect")
     .attr("fill", "#a2d5f2");
 
 // Map projection
-const projection = d3.geoMercator()
+const mercatorProjection = d3.geoMercator()
     .scale((width - 3) / (2 * Math.PI))
     .translate([width / 2, height / 2]);
+
+const globeProjection = d3.geoOrthographic()
+    .scale((width - 3) / 2)
+    .translate([width / 2, height / 2])
+    .clipAngle(90);
+
+const checkedInput = switchContainer.querySelector('input[name="switch"]:checked');
+var projection = mercatorProjection;
 
 // Create a scale for the colors
 const colorScale = d3.scaleQuantize()
@@ -33,8 +79,9 @@ Promise.all([
     d3.json("map/world.geojson"),
     d3.csv("data/filtered_df.csv"),
     d3.csv("data/cities.csv"),
-    d3.csv("data/weather-aggregated.csv")
-]).then(function ([geoData, energyData, cityData, weatherData]) {
+    d3.csv("data/weather-aggregated.csv"),
+    d3.csv("data/countries.csv")
+]).then(function ([geoData, energyData, cityData, weatherData, countryData]) {
     // Process the energy data
     const processedData = energyData.map(d => ({
         country: d.country,
@@ -72,6 +119,19 @@ Promise.all([
     let currentYear = 2000;
     let currentMetric = 'population';
 
+    // Define the scale and sensitivity for the globe view
+    const sensitivity = 75
+    const initialScale = projection.scale()
+
+    // The sea in the globe view
+    let seaPath = svg.append("circle")
+        .attr("fill", "blue")
+        .attr("stroke", "#000")
+        .attr("stroke-width", "1")
+        .attr("cx", width/2)
+        .attr("cy", height/2)
+        .attr("r", initialScale)
+
     function updateMap(year, metric) {
         const yearData = processedData.filter(d => d.year === year);
 
@@ -84,9 +144,12 @@ Promise.all([
             };
         });
 
-        svg.selectAll("path")
-            .data(data)
+        const countryPaths = svg.selectAll("path.country")
+            .data(data);
+
+        countryPaths
             .join("path")
+            .attr("class", "country")
             .attr("fill", d => d.properties[metric] ? colorScale(d.properties[metric]) : "#ccc")
             .attr("d", d3.geoPath().projection(projection))
             .style("stroke", "black")
@@ -101,7 +164,189 @@ Promise.all([
             .on("click", function (event, d) {
                 showCountryModal(d.properties, cityData, weatherData);
             });
+
+        // Custom drag behavior for globe
+        const drag = d3.drag()
+            .on('drag', (event) => {
+                const rotate = projection.rotate();
+                const k = sensitivity / projection.scale();
+                projection.rotate([
+                    rotate[0] + event.dx * k,
+                    rotate[1] - event.dy * k
+                ]);
+                svg.selectAll("path.country").attr("d", d3.geoPath().projection(projection));
+            });
+
+        // Define the zoom behavior
+        const mercatorZoom = d3.zoom()
+            .scaleExtent([0.3, 10])
+            .on('zoom', (event) => {
+                const transform = event.transform;
+                
+                // Update the projection's scale and translation
+                projection
+                    .scale(initialScale * transform.k)
+                    .translate([transform.x, transform.y]);
+                
+                // Update the paths with the new projection settings
+                svg.selectAll("path.country").attr("d", d3.geoPath().projection(projection));
+            });
+
+        // Custom zoom behavior for globe 
+        const zoom = d3.zoom()
+            .on('zoom', (event) => {
+                if (event.transform.k > 0.3) {
+                    projection.scale(initialScale * event.transform.k);
+                    svg.selectAll("path.country").attr("d", d3.geoPath().projection(projection));
+                    seaPath.attr("r", projection.scale());
+                } else {
+                    event.transform.k = 0.3;
+                }
+            });
+
+        // Have the drag and zoom behavior different for the globe view
+        // But default in other views.
+        if (projection == mercatorProjection){
+            console.log("Being called!")
+            seaPath.style("display", "none");
+            svg.call(mercatorZoom).call(d3.drag())
+                .call(mercatorZoom.transform, d3.zoomIdentity.translate(width / 2, height / 2).scale(1));
+        } else {
+            // Make sure sea and countires are equal size
+            projection.scale(initialScale);
+            countryPaths.attr("d", d3.geoPath().projection(projection));
+            seaPath.attr("r", projection.scale());
+            seaPath.style("display", "block");
+            svg.call(drag).call(zoom);
+        }
     }
+
+    const yearData = processedData.filter(d => d.year === currentYear);
+    const data = geoData.features.map(geo => {
+        const energy = yearData.find(p => p.country === geo.properties.name);
+        const country = countryData.find(p => p.country === geo.properties.name);
+        return {
+            ...geo,
+            properties: { ...geo.properties, ...energy, ...country }
+        };
+    });
+
+    const temp = data.reduce((acc, country) => {
+        const continent = country.properties.continent;
+        const region = country.properties.region;
+
+        if (!acc[continent]) {
+            acc[continent] = {};
+        }
+        if (!acc[continent][region]) {
+            acc[continent][region] = [];
+        }
+        acc[continent][region].push(country);
+
+        return acc;
+    }, {});
+
+    // Convert the nested data to an array format similar to d3.nest()
+    const nestedData = Object.keys(temp).map(continent => ({
+        key: continent,
+        values: Object.keys(temp[continent]).map(region => ({
+            key: region,
+            values: temp[continent][region]
+        }))
+    }));
+    
+    console.log(nestedData);
+
+    // On clicking another projection, adjust the map and selector
+    switchContainer.addEventListener('change', (event) => {
+        const switchId = event.target.id;
+        switch(switchId) {
+            case "globe":
+                d3.select("#map").style("display", "block");
+                svg.style("display", "block");
+                svg.style("transform","translate(0px,0)");
+                treemapSvg.style("display", "none");
+                projection = globeProjection;
+                break;
+            case "treemap":
+                d3.select("#map").style("display", "none");
+                svg.style("display", "none");
+                treemapSvg.style("display", "block");
+                
+                // drawTreeMap();                
+                // Convert data to a format suitable for d3.hierarchy
+                function transformData(data) {
+                    return {
+                        name: "root",
+                        children: data.map(continent => ({
+                            name: continent.key,
+                            children: (continent.values || []).map(region => ({
+                                name: region.key,
+                                children: (region.values || []).map(country => ({
+                                    name: country.properties.name,
+                                    value: country.properties[currentMetric]
+                                }))
+                            }))
+                        }))
+                    };
+                }
+
+                const transformedData = transformData(nestedData);
+
+                // Log the transformed data to check if it is correct
+                console.log("Transformed Data:", JSON.stringify(transformedData, null, 2));
+
+                const root = d3.hierarchy(transformedData)
+                    .sum(d => d.value)
+                    .sort((a, b) => b.value - a.value);
+
+                // Log the root hierarchy to check if it is correct
+                console.log("Root Hierarchy:", root);
+
+                const treemapLayout = d3.treemap()
+                    .size([width, height])
+                    .padding(1);
+
+                treemapLayout(root);
+
+                // Log the root after treemap layout to check the positions
+                console.log("Root after Treemap Layout:", root);
+
+                // Create a color scale for continents
+                const color = d3.scaleOrdinal(d3.schemeCategory10);
+
+                const nodes = treemapSvg.selectAll("g")
+                    .data(root.leaves())
+                    .enter()
+                    .append("g")
+                    .attr("transform", d => `translate(${d.x0},${d.y0})`);
+
+                nodes.append("rect")
+                    .attr("class", "node")
+                    .attr("width", d => d.x1 - d.x0)
+                    .attr("height", d => d.y1 - d.y0)
+                    .attr("fill", d => color(d.parent.parent.data.name));
+
+                nodes.append("text")
+                    .attr("class", "label")
+                    .attr("x", 4)
+                    .attr("y", 14)
+                    .text(d => d.data.name + " - " + d.data.value);
+                break;
+            default:
+                d3.select("#map").style("display", "block");
+                svg.style("display", "block");
+                svg.style("transform","translate(0px,0)");
+                treemapSvg.style("display", "none");
+
+                projection = mercatorProjection;
+                break;
+        }
+        updateMap(currentYear, currentMetric)
+
+        setHighlighterPosition();
+        setHighlighterWidth();
+    });
 
     // Call updateMap initially to load the default view
     updateMap(currentYear, currentMetric);
@@ -324,7 +569,10 @@ function drawCountryMap(properties, container, cityData, weatherData) {
     Promise.all([
         d3.json(fn)
     ]).then(function ([countryData]) {
-        var projection = d3.geoMercator();
+        // Russia and New Zealand have to be wrapped around
+        console.log(countryName);
+        var projection = countryName == "russia" || countryName == "new zealand" ? 
+            d3.geoMercator().rotate([-15, 0]) : d3.geoMercator();
         var path = d3.geoPath().projection(projection);
 
         // Compute the actual height/width, taking padding into account
@@ -492,3 +740,4 @@ function addFormula(formula) {
     // Clear the formula input
     document.getElementById("formula-input").value = '';
 }
+
