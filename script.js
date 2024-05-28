@@ -263,6 +263,7 @@ Promise.all([
 // Tooltip functions
 function showTooltip(event, text) {
     const tooltip = d3.select("body").append("div")
+        .attr("id", "map-tooltip")
         .attr("class", "tooltip")
         .style("position", "absolute")
         .style("opacity", 0)
@@ -275,7 +276,7 @@ function showTooltip(event, text) {
 }
 
 function hideTooltip() {
-    d3.select(".tooltip").remove();
+    d3.select("#map-tooltip").remove();
 }
 
 function showCountryModal(properties, cityData, weatherData) {
@@ -739,6 +740,28 @@ function transformData(geoData, processedData, countryData, currentMetric, curre
     };
 }
 
+// Handle the treemap tooltip
+function updateTooltipPosition(event, d) {
+    treemapTooltip.style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY - 20) + "px");
+}
+
+function showTreemapTooltip(event, d) {
+    treemapTooltip.style("display", "block")
+        .html(`<strong>${d.data.name}</strong><br>${d.data.value}`)
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY - 20) + "px");
+}
+
+function hideTreemapTooltip(event, d) {
+    treemapTooltip.style("display", "none");
+}
+
+// Create a treemapTooltip container
+const treemapTooltip = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("display", "none");
+
 // Function to update the treemap
 function updateTreemap(geoData, processedData, countryData, currentMetric, currentYear, treemapCountryCount) {
     // Transform the data with the current metric
@@ -769,15 +792,18 @@ function updateTreemap(geoData, processedData, countryData, currentMetric, curre
         .attr("class", "node")
         .attr("width", d => d.x1 - d.x0)
         .attr("height", d => d.y1 - d.y0)
-        .attr("fill", d => color(d.parent.parent.data.name));
+        .attr("fill", d => color(d.parent.parent.data.name))
+        .on("mouseover", (event, d) => showTreemapTooltip(event, d))
+        .on("mouseout", (event, d) => hideTreemapTooltip(event, d))
+        .on("mousemove", (event, d) => updateTooltipPosition(event, d));
 
     nodesEnter.append("text")
         .attr("class", "label")
         .attr("x", 4)
         .attr("y", 14)
-        .text(d => d.data.name + " - " + d.data.value);
+        .text(d => d.data.name);
 
-    // Update existing nodes
+    // Update existing nodes with animation
     nodes.transition().duration(750)
         .attr("transform", d => `translate(${d.x0},${d.y0})`);
 
@@ -791,7 +817,7 @@ function updateTreemap(geoData, processedData, countryData, currentMetric, curre
         .transition().duration(750)
         .attr("x", 4)
         .attr("y", 14)
-        .text(d => d.data.name + " - " + d.data.value);
+        .text(d => d.data.name);
 
     // Remove old nodes
     nodes.exit().remove();
