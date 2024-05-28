@@ -3,6 +3,8 @@ const width = window.innerWidth, height = window.innerHeight;
 
 // Start the page from the mercator view. Globe has issues if loaded immediately.
 document.getElementById('mercator').checked = true;
+document.getElementById("metric-selector").value = "population";
+document.getElementById("year-slider").value = "2000";
 
 // Fix selector highlighter width at the top of the page
 const switchContainer = document.getElementById('switchContainer');
@@ -63,6 +65,10 @@ const globeProjection = d3.geoOrthographic()
 
 var projection = mercatorProjection;
 
+// Define the scale and sensitivity for the globe view
+const sensitivity = 75
+const initialScale = projection.scale()
+
 // Create a scale for the colors
 const colorScale = d3.scaleQuantize()
     .domain([0, 100000000])
@@ -112,14 +118,10 @@ Promise.all([
 
     let currentYear = 2000;
     let currentMetric = 'population';
-
-    // Define the scale and sensitivity for the globe view
-    const sensitivity = 75
-    const initialScale = projection.scale()
     
     let seaPath = svg.append("circle")
         .attr("class", "sea-circle") // Assigning a class
-        .attr("fill", "blue")
+        .attr("fill", "#0672cb")
         .attr("stroke", "#000")
         .attr("stroke-width", "1")
         .attr("cx", width/2)
@@ -160,43 +162,7 @@ Promise.all([
                 showCountryModal(d.properties, cityData, weatherData);
             });
     }
-
-    const yearData = processedData.filter(d => d.year === currentYear);
-    const data = geoData.features.map(geo => {
-        const energy = yearData.find(p => p.country === geo.properties.name);
-        const country = countryData.find(p => p.country === geo.properties.name);
-        return {
-            ...geo,
-            properties: { ...geo.properties, ...energy, ...country }
-        };
-    });
-
-    const temp = data.reduce((acc, country) => {
-        const continent = country.properties.continent;
-        const region = country.properties.region;
-
-        if (!acc[continent]) {
-            acc[continent] = {};
-        }
-        if (!acc[continent][region]) {
-            acc[continent][region] = [];
-        }
-        acc[continent][region].push(country);
-
-        return acc;
-    }, {});
-
-    // Convert the nested data to an array format similar to d3.nest()
-    const nestedData = Object.keys(temp).map(continent => ({
-        key: continent,
-        values: Object.keys(temp[continent]).map(region => ({
-            key: region,
-            values: temp[continent][region]
-        }))
-    }));
     
-    console.log(nestedData);
-
     // On clicking another projection, adjust the map and selector
     switchContainer.addEventListener('change', (event) => {
         const switchId = event.target.id;
@@ -217,66 +183,8 @@ Promise.all([
                 d3.select("#map").style("display", "none");
                 svg.style("display", "none");
                 treemapSvg.style("display", "block");
-                
-                // drawTreeMap();                
-                // Convert data to a format suitable for d3.hierarchy
-                function transformData(data) {
-                    return {
-                        name: "root",
-                        children: data.map(continent => ({
-                            name: continent.key,
-                            children: (continent.values || []).map(region => ({
-                                name: region.key,
-                                children: (region.values || []).map(country => ({
-                                    name: country.properties.name,
-                                    value: country.properties[currentMetric]
-                                }))
-                            }))
-                        }))
-                    };
-                }
-
-                const transformedData = transformData(nestedData);
-
-                // Log the transformed data to check if it is correct
-                console.log("Transformed Data:", JSON.stringify(transformedData, null, 2));
-
-                const root = d3.hierarchy(transformedData)
-                    .sum(d => d.value)
-                    .sort((a, b) => b.value - a.value);
-
-                // Log the root hierarchy to check if it is correct
-                console.log("Root Hierarchy:", root);
-
-                const treemapLayout = d3.treemap()
-                    .size([width, height])
-                    .padding(1);
-
-                treemapLayout(root);
-
-                // Log the root after treemap layout to check the positions
-                console.log("Root after Treemap Layout:", root);
-
-                // Create a color scale for continents
-                const color = d3.scaleOrdinal(d3.schemeCategory10);
-
-                const nodes = treemapSvg.selectAll("g")
-                    .data(root.leaves())
-                    .enter()
-                    .append("g")
-                    .attr("transform", d => `translate(${d.x0},${d.y0})`);
-
-                nodes.append("rect")
-                    .attr("class", "node")
-                    .attr("width", d => d.x1 - d.x0)
-                    .attr("height", d => d.y1 - d.y0)
-                    .attr("fill", d => color(d.parent.parent.data.name));
-
-                nodes.append("text")
-                    .attr("class", "label")
-                    .attr("x", 4)
-                    .attr("y", 14)
-                    .text(d => d.data.name + " - " + d.data.value);
+            
+                updateTreemap(geoData, processedData, countryData, currentMetric, currentYear);
                 break;
             default:
                 d3.select("#map").style("display", "block");
@@ -297,57 +205,21 @@ Promise.all([
 
     // Call updateMap initially to load the default view
     updateMap(currentYear, currentMetric);
+    updateTreemap(geoData, processedData, countryData, currentMetric, currentYear);
 
     // Setup UI controls for year and metric
     d3.select("#year-slider").on("input", function () {
         currentYear = +this.value;
         d3.select("#year-display").text(`Year: ${currentYear}`);
         updateMap(currentYear, currentMetric);
+        updateTreemap(geoData, processedData, countryData, currentMetric, currentYear);
     });
 
     d3.select("#metric-selector").on("change", function (event) {
         currentMetric = this.value;
         updateMap(currentYear, currentMetric);
+        updateTreemap(geoData, processedData, countryData, currentMetric, currentYear);
     });
-
-    // Custom drag behavior for globe
-    const globeDrag = d3.drag()
-        .on('drag', (event) => {
-            const rotate = projection.rotate();
-            const k = sensitivity / projection.scale();
-            projection.rotate([
-                rotate[0] + event.dx * k,
-                rotate[1] - event.dy * k
-            ]);
-            svg.selectAll("path.country").attr("d", d3.geoPath().projection(projection));
-        });
-
-    // Custom zoom behavior for globe 
-    const globeZoom = d3.zoom()
-        .on('zoom', (event) => {
-            if (event.transform.k > 0.3) {
-                projection.scale(initialScale * event.transform.k);
-                svg.selectAll("path.country").attr("d", d3.geoPath().projection(projection));
-                svg.select(".sea-circle").attr("r", projection.scale());
-            } else {
-                event.transform.k = 0.3;
-            }
-        });
-
-    // Mercator zoom behavior
-    const mercatorZoom = d3.zoom()
-        .scaleExtent([0.3, 10])
-        .on('zoom', (event) => {
-            const transform = event.transform;
-            
-            // Update the projection's scale and translation
-            projection
-                .scale(initialScale * transform.k)
-                .translate([transform.x, transform.y]);
-            
-            // Update the paths with the new projection settings
-            svg.selectAll("path.country").attr("d", d3.geoPath().projection(projection));
-        });
 
     svg.call(mercatorZoom).call(d3.drag())
         .call(mercatorZoom.transform, d3.zoomIdentity.translate(width / 2, height / 2).scale(1));
@@ -560,7 +432,6 @@ function drawCountryMap(properties, container, cityData, weatherData) {
         d3.json(fn)
     ]).then(function ([countryData]) {
         // Russia and New Zealand have to be wrapped around
-        console.log(countryName);
         var projection = countryName == "russia" || countryName == "new zealand" ? 
             d3.geoMercator().rotate([-15, 0]) : d3.geoMercator();
         var path = d3.geoPath().projection(projection);
@@ -729,5 +600,156 @@ function addFormula(formula) {
 
     // Clear the formula input
     document.getElementById("formula-input").value = '';
+}
+
+// Custom drag behavior for globe
+const globeDrag = d3.drag()
+    .on('drag', (event) => {
+        const rotate = projection.rotate();
+        const k = sensitivity / projection.scale();
+        projection.rotate([
+            rotate[0] + event.dx * k,
+            rotate[1] - event.dy * k
+        ]);
+        svg.selectAll("path.country").attr("d", d3.geoPath().projection(projection));
+    });
+
+// Custom zoom behavior for globe 
+const globeZoom = d3.zoom()
+    .on('zoom', (event) => {
+        if (event.transform.k > 0.3) {
+            projection.scale(initialScale * event.transform.k);
+            svg.selectAll("path.country").attr("d", d3.geoPath().projection(projection));
+            svg.select(".sea-circle").attr("r", projection.scale());
+        } else {
+            event.transform.k = 0.3;
+        }
+    });
+
+// Mercator zoom behavior
+const mercatorZoom = d3.zoom()
+    .scaleExtent([0.3, 10])
+    .on('zoom', (event) => {
+        const transform = event.transform;
+        
+        // Update the projection's scale and translation
+        projection
+            .scale(initialScale * transform.k)
+            .translate([transform.x, transform.y]);
+        
+        // Update the paths with the new projection settings
+        svg.selectAll("path.country").attr("d", d3.geoPath().projection(projection));
+    });
+
+
+// Transform the data for the treemap
+function transformData(geoData, processedData, countryData, currentMetric, currentYear) {
+    const yearData = processedData.filter(d => d.year === currentYear);
+
+    const data = geoData.features.map(geo => {
+        const energy = yearData.find(p => p.country === geo.properties.name);
+        const country = countryData.find(p => p.country === geo.properties.name);
+        return {
+            ...geo,
+            properties: { ...geo.properties, ...energy, ...country }
+        };
+    });
+
+    const temp = data.reduce((acc, country) => {
+        const continent = country.properties.continent;
+        const region = country.properties.region;
+
+        if (!acc[continent]) {
+            acc[continent] = {};
+        }
+        if (!acc[continent][region]) {
+            acc[continent][region] = [];
+        }
+        acc[continent][region].push(country);
+
+        return acc;
+    }, {});
+
+
+    // Convert the nested data to an array format similar to d3.nest()
+    const nestedData = Object.keys(temp).map(continent => ({
+        key: continent,
+        values: Object.keys(temp[continent]).map(region => ({
+            key: region,
+            values: temp[continent][region]
+        }))
+    }));
+
+    return {
+        name: "root",
+        children: nestedData.map(continent => ({
+            name: continent.key,
+            children: (continent.values || []).map(region => ({
+                name: region.key,
+                children: (region.values || []).map(country => ({
+                    name: country.properties.name,
+                    value: country.properties[currentMetric]
+                }))
+            }))
+        }))
+    };
+}
+
+// Function to update the treemap
+function updateTreemap(geoData, processedData, countryData, currentMetric, currentYear) {
+    // Transform the data with the current metric
+    const transformedData = transformData(geoData, processedData, countryData, currentMetric, currentYear);
+
+    // Create the root hierarchy
+    const root = d3.hierarchy(transformedData)
+        .sum(d => d.value)
+        .sort((a, b) => b.value - a.value);
+
+    // Apply the treemap layout
+    const treemapLayout = d3.treemap()
+        .size([width, height])
+        .padding(1);
+    treemapLayout(root);
+
+    // Bind data to nodes
+    const nodes = treemapSvg.selectAll("g")
+        .data(root.leaves(), d => d.data.name);
+
+    // Enter new nodes
+    const nodesEnter = nodes.enter().append("g")
+        .attr("transform", d => `translate(${d.x0},${d.y0})`);
+
+    const color = d3.scaleOrdinal(d3.schemeCategory10);
+
+    nodesEnter.append("rect")
+        .attr("class", "node")
+        .attr("width", d => d.x1 - d.x0)
+        .attr("height", d => d.y1 - d.y0)
+        .attr("fill", d => color(d.parent.parent.data.name));
+
+    nodesEnter.append("text")
+        .attr("class", "label")
+        .attr("x", 4)
+        .attr("y", 14)
+        .text(d => d.data.name + " - " + d.data.value);
+
+    // Update existing nodes
+    nodes.transition().duration(750)
+        .attr("transform", d => `translate(${d.x0},${d.y0})`);
+
+    nodes.select("rect")
+        .transition().duration(750)
+        .attr("width", d => d.x1 - d.x0)
+        .attr("height", d => d.y1 - d.y0)
+        .attr("fill", d => color(d.parent.parent.data.name));
+
+    nodes.select("text")
+        .transition().duration(750)
+        .attr("x", 4)
+        .attr("y", 14)
+        .text(d => d.data.name + " - " + d.data.value);
+
+    // Remove old nodes
+    nodes.exit().remove();
 }
 
