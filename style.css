@@ -176,6 +176,17 @@ input#switch3:checked ~ .highlighter {
     box-shadow: 0 8px 16px rgba(0,0,0,0.3);
 }
 
+.modal-freesize {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 1001;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+}
+
 .top-container {
     display: flex;
     flex: 1 1 auto;

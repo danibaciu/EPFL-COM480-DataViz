@@ -1,6 +1,10 @@
 // Set the dimensions to fill the screen
 const width = window.innerWidth, height = window.innerHeight;
 
+window.addEventListener('resize', function(event) {
+    showRefreshPopup();
+}, true);
+
 // Start the page from the mercator view. Globe has issues if loaded immediately.
 document.getElementById('mercator').checked = true;
 document.getElementById("metric-selector").value = "population";
@@ -753,3 +757,46 @@ function updateTreemap(geoData, processedData, countryData, currentMetric, curre
     nodes.exit().remove();
 }
 
+function showRefreshPopup() {
+    d3.selectAll(".modal-background").remove();
+
+    const modalBackground = d3.select("body").append("div")
+        .attr("class", "modal-background");
+
+    const modal = modalBackground.append("div")
+        .attr("class", "modal-freesize");
+
+    // Container for the top two-thirds section
+    const titleContainer = modal.append("div")
+        .attr("class", "top-container")
+        .style("text-align", "center");;
+
+    const buttonContainer = modal.append("div")
+        .style("text-align", "center");
+
+    // Country name at the top of the selection container
+    titleContainer
+        .append("p")
+        .html("You have resized your window.<br/>The visualizations may not be correct anymore.<br/>We recommend refreshing the page to make sure it is accurate!")
+        .style("margin", "auto");
+
+    // Plot All Features button
+    buttonContainer.append("button")
+        .attr("class", "plot-button")
+        .text("Refresh!")
+        .on("click", function () {
+            location.reload();
+        });
+
+    modal.on("click", function (event) {
+        event.stopPropagation();
+    });
+
+    modalBackground.on("click", function () {
+        modalBackground.remove();
+        svgContainer.style("filter", "");
+    });
+
+    // Apply the blur effect to the SVG container
+    svgContainer.style("filter", "blur(8px)");
+}
