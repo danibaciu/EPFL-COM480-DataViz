@@ -1,19 +1,25 @@
 // Set the dimensions to fill the screen
 const width = window.innerWidth, height = window.innerHeight;
 
+// Add popup urging user to refresh if the page is resized (otherwise things get messy)
 window.addEventListener('resize', function(event) {
     showRefreshPopup();
 }, true);
 
-// Start the page from the mercator view. Globe has issues if loaded immediately.
+// Start with default values. Otherwise some may get cached.
 document.getElementById('mercator').checked = true;
 document.getElementById("metric-selector").value = "population";
 document.getElementById("year-slider").value = "2000";
+document.getElementById("item-count-slider").value = "10";
 
 // Fix selector highlighter width at the top of the page
 const switchContainer = document.getElementById('switchContainer');
 const highlighter = document.getElementById('highlighter');
 const switchLabels = switchContainer.querySelectorAll('.switch-label');
+
+// Display the selector next to existing controls in bottom left corner.
+document.getElementById('elements-selector').style.left = 
+    `${document.getElementById('controls').getBoundingClientRect().right + 10}px`; // 10px gap
 
 function setHighlighterWidth() {
     const checkedInput = switchContainer.querySelector('input[name="switch"]:checked');
@@ -122,6 +128,7 @@ Promise.all([
 
     let currentYear = 2000;
     let currentMetric = 'population';
+    let treemapCountryCount = 10;
     
     let seaPath = svg.append("circle")
         .attr("class", "sea-circle") // Assigning a class
@@ -168,9 +175,32 @@ Promise.all([
     }
     
     // On clicking another projection, adjust the map and selector
+    let previousId = null;
     switchContainer.addEventListener('change', (event) => {
         const switchId = event.target.id;
+        if(previousId == "treemap"){
+            d3.select("#elements-selector")
+                .transition()
+                .duration(500)
+                .style("opacity", 0)
+                .on("end", function() { // After the transition ends, set display to none
+                    d3.select("#elements-selector").style("display", "none");
+                });
+        }
         switch(switchId) {
+            case "treemap":
+                d3.select("#map").style("display", "none");
+                svg.style("display", "none");
+                treemapSvg.style("display", "block");
+
+                d3.select("#elements-selector")
+                    .style("display", "block")
+                    .transition()
+                    .duration(500)
+                    .style("opacity", 1);
+            
+                updateTreemap(geoData, processedData, countryData, currentMetric, currentYear, treemapCountryCount);
+                break;
             case "globe":
                 d3.select("#map").style("display", "block");
                 svg.style("display", "block");
@@ -182,13 +212,6 @@ Promise.all([
                 svg.selectAll("path.country").attr("d", d3.geoPath().projection(projection));
                 svg.select(".sea-circle").attr("r", projection.scale());
                 svg.select(".sea-circle").style("display", "block");
-                break;
-            case "treemap":
-                d3.select("#map").style("display", "none");
-                svg.style("display", "none");
-                treemapSvg.style("display", "block");
-            
-                updateTreemap(geoData, processedData, countryData, currentMetric, currentYear);
                 break;
             default:
                 d3.select("#map").style("display", "block");
@@ -205,24 +228,31 @@ Promise.all([
 
         setHighlighterPosition();
         setHighlighterWidth();
+        previousId = switchId;
     });
 
     // Call updateMap initially to load the default view
     updateMap(currentYear, currentMetric);
-    updateTreemap(geoData, processedData, countryData, currentMetric, currentYear);
+    updateTreemap(geoData, processedData, countryData, currentMetric, currentYear, treemapCountryCount);
 
     // Setup UI controls for year and metric
     d3.select("#year-slider").on("input", function () {
         currentYear = +this.value;
         d3.select("#year-display").text(`Year: ${currentYear}`);
         updateMap(currentYear, currentMetric);
-        updateTreemap(geoData, processedData, countryData, currentMetric, currentYear);
+        updateTreemap(geoData, processedData, countryData, currentMetric, currentYear, treemapCountryCount);
     });
-
+    
     d3.select("#metric-selector").on("change", function (event) {
         currentMetric = this.value;
         updateMap(currentYear, currentMetric);
-        updateTreemap(geoData, processedData, countryData, currentMetric, currentYear);
+        updateTreemap(geoData, processedData, countryData, currentMetric, currentYear, treemapCountryCount);
+    });
+    
+    d3.select("#item-count-slider").on("input", function () {
+        treemapCountryCount = +this.value;
+        d3.select("#item-count-display").text(`Display: ${treemapCountryCount} items`);
+        updateTreemap(geoData, processedData, countryData, currentMetric, currentYear, treemapCountryCount);
     });
 
     svg.call(mercatorZoom).call(d3.drag())
@@ -647,7 +677,7 @@ const mercatorZoom = d3.zoom()
 
 
 // Transform the data for the treemap
-function transformData(geoData, processedData, countryData, currentMetric, currentYear) {
+function transformData(geoData, processedData, countryData, currentMetric, currentYear, treemapCountryCount) {
     const yearData = processedData.filter(d => d.year === currentYear);
 
     const data = geoData.features.map(geo => {
@@ -658,8 +688,18 @@ function transformData(geoData, processedData, countryData, currentMetric, curre
             properties: { ...geo.properties, ...energy, ...country }
         };
     });
+    
+    const flattenedData = data.map(country => ({
+        ...country,
+        value: Number(country.properties[currentMetric]) || 0
+    }));
 
-    const temp = data.reduce((acc, country) => {
+    const sortedData = flattenedData.sort((a, b) => b.value - a.value);
+
+    // Get the top n countries
+    const topNData = sortedData.slice(0, treemapCountryCount);
+
+    const temp = topNData.reduce((acc, country) => {
         const continent = country.properties.continent;
         const region = country.properties.region;
 
@@ -700,9 +740,9 @@ function transformData(geoData, processedData, countryData, currentMetric, curre
 }
 
 // Function to update the treemap
-function updateTreemap(geoData, processedData, countryData, currentMetric, currentYear) {
+function updateTreemap(geoData, processedData, countryData, currentMetric, currentYear, treemapCountryCount) {
     // Transform the data with the current metric
-    const transformedData = transformData(geoData, processedData, countryData, currentMetric, currentYear);
+    const transformedData = transformData(geoData, processedData, countryData, currentMetric, currentYear, treemapCountryCount);
 
     // Create the root hierarchy
     const root = d3.hierarchy(transformedData)

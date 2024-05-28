@@ -12,13 +12,19 @@
     <div id="map"></div>
     <div id="treemapHolder"></div>
 
-    <div id="controls">
-        <input type="range" id="year-slider" min="2000" max="2020" value="2000">
-        <div id="year-display">Year: 2000</div>
-        <select id="metric-selector">
-            <option value="population">Population</option>
-            <option value="gdp">GDP</option>
-        </select>
+    <div id="container">
+        <div id="controls">
+            <input type="range" class="slider-selector" id="year-slider" min="2000" max="2020" value="2000">
+            <div class="slider-display" id="year-display">Year: 2000</div>
+            <select id="metric-selector">
+                <option value="population">Population</option>
+                <option value="gdp">GDP</option>
+            </select>
+        </div>
+        <div id="elements-selector">
+            <input type="range" class="slider-selector" id="item-count-slider" min="0" max="30" value="10">
+            <div class="slider-display" id="item-count-display">Display: 10 items</div>
+        </div>
     </div>
 
     <div class="switch-card">

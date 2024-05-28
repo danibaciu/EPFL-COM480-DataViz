@@ -101,7 +101,22 @@ input#switch3:checked ~ .highlighter {
     gap: 10px;
 }
 
-#year-slider {
+#elements-selector {
+    position: absolute;
+    bottom: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    display: none; /* Initially hidden */
+    opacity: 0; /* Initial opacity */
+}
+
+.slider-selector {
     width: 200px;
     -webkit-appearance: none;
     appearance: none;
@@ -111,7 +126,7 @@ input#switch3:checked ~ .highlighter {
     outline: none;
 }
 
-#year-slider::-webkit-slider-thumb {
+.slider-selector::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 20px;
@@ -121,7 +136,7 @@ input#switch3:checked ~ .highlighter {
     cursor: pointer;
 }
 
-#year-slider::-moz-range-thumb {
+.slider-selector::-moz-range-thumb {
     width: 20px;
     height: 20px;
     border-radius: 50%;
@@ -129,7 +144,7 @@ input#switch3:checked ~ .highlighter {
     cursor: pointer;
 }
 
-#year-display {
+.slider-display {
     font-size: 16px;
     color: #2c3e50;
 }
