@@ -456,55 +456,63 @@ function showCountryModal(properties, cityData, weatherData) {
     let currentYear = startYear;
     // end play button variables
 
-    // Load and display the detailed country map
-    const playButton = mapContainer.append("button")
-        .attr("id", "play-button-country")
-        .text("Play")
-        .on("click", function () {
-            if (isPlaying) {
-                clearInterval(interval);
-                document.getElementById('play-button-country').textContent = 'Play';
-            } else {
-                document.getElementById('play-button-country').textContent = 'Pause';
-                startIteration();
-            }
-            isPlaying = !isPlaying;
+    let fn = "map/countries/" + properties.name.toLowerCase().replaceAll(" ", "_") + ".json";
+    Promise.all([
+        d3.json(fn)
+    ]).then(function ([countryData]) {
+
+        // Load and display the detailed country map
+        const playButton = mapContainer.append("button")
+            .attr("id", "play-button-country")
+            .text("Play")
+            .on("click", function () {
+                if (isPlaying) {
+                    clearInterval(interval);
+                    document.getElementById('play-button-country').textContent = 'Play';
+                } else {
+                    document.getElementById('play-button-country').textContent = 'Pause';
+                    startIteration();
+                }
+                isPlaying = !isPlaying;
+            });
+
+        // Append the select element
+        const select = mapContainer.append("select")
+            .attr("id", "country-metric-selector");
+
+        // Append the option elements to the select element
+        select.append("option")
+            .attr("value", "population")
+            .text("Population");
+
+        select.append("option")
+            .attr("value", "gdp")
+            .text("GDP");
+
+        d3.select("#country-metric-selector").on("change", function (event) {
+            currentMetric = this.value;
         });
 
-    // Append the select element
-    const select = mapContainer.append("select")
-        .attr("id", "country-metric-selector");
-
-    // Append the option elements to the select element
-    select.append("option")
-        .attr("value", "population")
-        .text("Population");
-
-    select.append("option")
-        .attr("value", "gdp")
-        .text("GDP");
-
-    d3.select("#country-metric-selector").on("change", function (event) {
-        currentMetric = this.value;
+        // Function to start the iteration
+        function startIteration() {
+            if (currentYear >= endYear) currentYear = startYear;
+            interval = setInterval(() => {
+                if (currentYear >= endYear) {
+                    clearInterval(interval);
+                    isPlaying = false;
+                    document.getElementById('play-button-country').textContent = 'Play';
+                    return;
+                }
+                // todo : update map with new year/metric
+                currentYear++;
+                updateCountryMap(properties, mapContainer, cityData, weatherData, countryData, currentYear, currentMetric)
+            }, 1000);
+        }
+        
+        drawCountryMap(properties, mapContainer, cityData, countryData);
+        updateCountryMap(properties, mapContainer, cityData, weatherData, countryData, currentYear, currentMetric);
     });
-
-    // Function to start the iteration
-    function startIteration() {
-        if (currentYear >= endYear) currentYear = startYear;
-        interval = setInterval(() => {
-            if (currentYear >= endYear) {
-                clearInterval(interval);
-                isPlaying = false;
-                document.getElementById('play-button-country').textContent = 'Play';
-                return;
-            }
-            // todo : update map with new year/metric
-            currentYear++;
-        }, 1000);
-    }
-
-    drawCountryMap(properties, mapContainer, cityData, weatherData, currentYear, currentMetric);
-
+    
     // Bottom section for the plot
     const plotContainer = modal.append("div")
         .attr("class", "plot-container");
@@ -563,111 +571,151 @@ function showCountryModal(properties, cityData, weatherData) {
     svgContainer.style("filter", "blur(8px)");
 }
 
-function drawCountryMap(properties, container, cityData, weatherData, currentYear, currentMetric) {
+function getColor(i, countryCities, weatherData, currentYear, currentMetric) {
+    const stationData = weatherData.filter(d => d.station_id == countryCities[i].station_id);
+    const yearData = stationData.filter(d => d.date == currentYear);
+
+    if (yearData.length < 1)
+        return "#ccc";
+
+    var t = yearData[0][currentMetric]
+    var hue = 10 + 360 * (30 - t) / 60;
+    return 'hsl(' + [hue, '70%', '50%'] + ')';
+}
+
+function updateCountryMap(properties, container, cityData, weatherData, countryData, currentYear, currentMetric) {
+    const countryName = properties.name.toLowerCase();
+    var projection = countryName == "russia" || countryName == "new zealand" ? 
+            d3.geoMercator().rotate([-15, 0]) : d3.geoMercator();
+    const parentComputedStyle = window.getComputedStyle(container.node());
+    const paddingHor = parseFloat(parentComputedStyle.paddingLeft) + parseFloat(parentComputedStyle.paddingRight);
+    const paddingVert = parseFloat(parentComputedStyle.paddingTop) + parseFloat(parentComputedStyle.paddingBottom);
+
+    const effWidth = container.node().clientWidth - paddingHor;
+    const effHeight = container.node().clientHeight - paddingVert;
+    projection.fitSize([effWidth, effHeight], countryData);
+
+    const countryCities = cityData.filter(d => d.country === properties.name);
+    var mapSvg = d3.select("#indiv-map-svg");
+    var Tooltip = d3.select("#indiv-map-tooltip");
+
+    // Define the functions for hovering a city
+    var onMouseMove = function (event) {
+        Tooltip.style("display", "block");
+        d3.select(this).attr("r", 7);
+        if (typeof event !== 'undefined') {
+            Tooltip.style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY + 10) + "px");
+        }
+    };
+
+    var onMouseLeave = function () {
+        Tooltip.style("display", "none");
+        d3.select(this).attr("r", 5);
+    };
+
+    var onMouseOver = function (d) {
+        const stationData = weatherData.filter(d => d.station_id == d3.select(this).attr("station-code"));
+        const yearData = stationData.filter(d => d.date == currentYear);
+
+        let value = yearData.length < 1 ? "NaN" : yearData[0][currentMetric];
+        Tooltip.html("City: " + d3.select(this).attr("data-city-name") + " - Value: " + value);
+    };
+    
+    // Update the voronoi diagram
+    const coords = countryCities.map(city => projection([city.longitude, city.latitude]));
+    const delaunay = d3.Delaunay.from(coords);
+    const voronoi = delaunay.voronoi([0, 0, effWidth, effHeight]);
+
+    // Define a geoPath generator
+    const geoPath = d3.geoPath(projection);
+
+    // Create a group for voronoi cells
+    var voronoiGroup = mapSvg.select("#voronoi-mapgroup");
+    
+    // Apply the clip path to the voronoi diagram
+    voronoiGroup.selectAll(".voronoi")
+        .data(coords)
+        .join("path")
+        .attr("class", "voronoi")
+        .attr("d", (d, i) => voronoi.renderCell(i))
+        .attr("clip-path", "url(#clip-country)")
+        .style("fill", (d, i) => getColor(i, countryCities, weatherData, currentYear, currentMetric))
+        .style("stroke", "black");
+
+    // Update city circles
+    const cityCircles = mapSvg.select("#city-group").selectAll("circle")
+        .data(countryCities);
+
+    cityCircles.enter()
+        .append("circle")
+        .attr("cx", d => projection([d.longitude, d.latitude])[0])
+        .attr("cy", d => projection([d.longitude, d.latitude])[1])
+        .attr("r", 5)
+        .style("fill", "black")
+        .merge(cityCircles)
+        .attr("data-city-name", d => d.city_name)
+        .attr("station-code", d => d.station_id)
+        .on("mouseover", onMouseOver)
+        .on("mousemove", onMouseMove)
+        .on("mouseleave", onMouseLeave);
+
+    cityCircles.exit().remove();
+}
+
+
+
+function drawCountryMap(properties, container, cityData, countryData) {
     const countryName = properties.name.toLowerCase();
     const mapSvg = container.append("svg")
+        .attr("id", "indiv-map-svg")
         .attr("width", "100%")
         .attr("height", "100%");
 
     const countryCities = cityData.filter(d => d.country === properties.name);
 
-    let fn = "map/countries/" + countryName.replaceAll(" ", "_") + ".json";
-    Promise.all([
-        d3.json(fn)
-    ]).then(function ([countryData]) {
-        // Russia and New Zealand have to be wrapped around
-        var projection = countryName == "russia" || countryName == "new zealand" ? 
-            d3.geoMercator().rotate([-15, 0]) : d3.geoMercator();
-        var path = d3.geoPath().projection(projection);
+    // Russia and New Zealand have to be wrapped around
+    var projection = countryName == "russia" || countryName == "new zealand" ? 
+        d3.geoMercator().rotate([-15, 0]) : d3.geoMercator();
+    var path = d3.geoPath().projection(projection);
 
-        // Compute the actual height/width, taking padding into account
-        const parentComputedStyle = window.getComputedStyle(container.node());
-        const paddingHor = parseFloat(parentComputedStyle.paddingLeft) + parseFloat(parentComputedStyle.paddingRight);
-        const paddingVert = parseFloat(parentComputedStyle.paddingTop) + parseFloat(parentComputedStyle.paddingBottom);
+    // Compute the actual height/width, taking padding into account
+    const parentComputedStyle = window.getComputedStyle(container.node());
+    const paddingHor = parseFloat(parentComputedStyle.paddingLeft) + parseFloat(parentComputedStyle.paddingRight);
+    const paddingVert = parseFloat(parentComputedStyle.paddingTop) + parseFloat(parentComputedStyle.paddingBottom);
 
-        const effWidth = container.node().clientWidth - paddingHor;
-        const effHeight = container.node().clientHeight - paddingVert;
-        projection.fitSize([effWidth, effHeight], countryData);
+    const effWidth = container.node().clientWidth - paddingHor;
+    const effHeight = container.node().clientHeight - paddingVert;
+    projection.fitSize([effWidth, effHeight], countryData);
 
-        mapSvg.append("defs").append("clipPath")
-            .attr("id", "map-clip")
-            .append("path")
-            .attr("d", path(countryData));
-        
-        var mapGroup = mapSvg.append("g")
-            .attr("clip-path", "url(#map-clip)");
+    mapSvg.append("defs").append("clipPath")
+        .attr("id", "map-clip")
+        .append("path")
+        .attr("d", path(countryData));
+    
+    var mapGroup = mapSvg.append("g")
+        .attr("id", "voronoi-mapgroup")
+        .attr("clip-path", "url(#map-clip)");
 
-        mapGroup.append("path")
-            .datum(countryData)
-            .attr("d", path)
-            .attr("fill", "grey");
+    const cityGroup = mapSvg.append("g")
+        .attr("class", "city-group")
+        .attr("id", "city-group");
 
-        var Tooltip = container
-            .append("div")
-            .style("display", "none")
-            .style("position", "absolute")
-            .style("background-color", "white")
-            .style("border", "solid")
-            .style("border-width", "2px")
-            .style("border-radius", "5px")
-            .style("padding", "5px");
 
-        var onMouseMove = function (event) {
-            Tooltip.style("display", "block");
-            d3.select(this).attr("r", 7);
-            if (typeof event !== 'undefined') {
-                Tooltip.style("left", (event.pageX + 10) + "px")
-                    .style("top", (event.pageY + 10) + "px");
-            }
-        };
+    mapGroup.append("path")
+        .datum(countryData)
+        .attr("d", path)
+        .attr("fill", "grey");
 
-        var onMouseLeave = function () {
-            Tooltip.style("display", "none");
-            d3.select(this).attr("r", 5);
-        };
-
-        var onMouseOver = function (d) {
-            // todo : modify value: 10 to the actual value -- get the info from somewhere
-            Tooltip.html("City: " + d3.select(this).attr("data-city-name") + " - Value: 10");
-        };
-
-        // Append a circle for each city
-        coords = []
-        countryCities.forEach(city => {
-            const projectedCoords = projection([city.longitude, city.latitude])
-            coords.push(projectedCoords)
-            mapSvg.append("circle")
-                .attr("cx", projectedCoords[0])
-                .attr("cy", projectedCoords[1])
-                .attr("r", 5)
-                .style("fill", "black")
-                .attr("data-city-name", city.city_name)
-                .on("mouseover", onMouseOver)
-                .on("mousemove", onMouseMove)
-                .on("mouseleave", onMouseLeave);
-        });
-
-        // Add the voronoi diagram on top
-        const delaunay = d3.Delaunay.from(coords);
-        const voronoi = delaunay.voronoi([0, 0, effWidth, effHeight]);
-
-        var test = function (d, i){
-            const stationData = weatherData.filter(d => d.station_id == countryCities[i].station_id);
-            const yearData = stationData.filter(d => d.date == currentYear);
-
-            var t = yearData[0][currentMetric]
-            var hue = 30 + 240 * (30 - t) / 60;
-            return 'hsl(' + [hue, '70%', '50%'] + ')'
-        }
-
-        mapGroup.selectAll(".voronoi")
-            .data(coords)
-            .enter().append("path")
-            .attr("class", "voronoi")
-            .attr("d", (d, i) => voronoi.renderCell(i))
-            .style("fill", (d, i) => test(d, i))
-            .style("stroke", "blue");
-    });
+    container.append("div")
+        .attr("id", "indiv-map-tooltip")
+        .style("display", "none")
+        .style("position", "absolute")
+        .style("background-color", "white")
+        .style("border", "solid")
+        .style("border-width", "2px")
+        .style("border-radius", "5px")
+        .style("padding", "5px");
 }
 
 function drawPlots(countryName, selectedFeatures, startYear, endYear) {
