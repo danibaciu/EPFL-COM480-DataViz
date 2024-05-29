@@ -293,6 +293,7 @@ Promise.all([
                 return;
             }
             updateMap(currentYear, currentMetric);
+            updateTreemap(geoData, processedData, countryData, currentMetric, currentYear, treemapCountryCount);
             currentYear++;
             d3.select("#year-display").text(`Year: ${currentYear}`);
             d3.select("#year-slider").property("value", currentYear);
