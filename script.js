@@ -1,3 +1,14 @@
+let years = {
+    "population": {
+        "startYear": 2000,
+        "endYear": 2020
+    },
+    "gdp": {
+        "startYear": 2010,
+        "endYear": 2020
+    }
+}
+
 // Set the dimensions to fill the screen
 const width = window.innerWidth, height = window.innerHeight;
 
@@ -128,6 +139,7 @@ Promise.all([
 
     let currentYear = 2000;
     let currentMetric = 'population';
+
     let treemapCountryCount = 10;
     
     let seaPath = svg.append("circle")
@@ -140,6 +152,13 @@ Promise.all([
         .attr("r", initialScale)
         .style("display", "none");
         
+    // play button
+    let isPlaying = false;
+    let interval;
+    let endYear = years[currentMetric]["endYear"];
+    let startYear = years[currentMetric]["startYear"];
+    // end play button variables
+
     function updateMap(year, metric) {
         const yearData = processedData.filter(d => d.year === year);
 
@@ -245,6 +264,8 @@ Promise.all([
     
     d3.select("#metric-selector").on("change", function (event) {
         currentMetric = this.value;
+        endYear = years[currentMetric]["endYear"];
+        startYear = years[currentMetric]["startYear"];
         updateMap(currentYear, currentMetric);
         updateTreemap(geoData, processedData, countryData, currentMetric, currentYear, treemapCountryCount);
     });
@@ -258,6 +279,39 @@ Promise.all([
     svg.call(mercatorZoom).call(d3.drag())
         .call(mercatorZoom.transform, d3.zoomIdentity.translate(width / 2, height / 2).scale(1));
     updateMap(currentYear, currentMetric);
+
+    // dani code below:
+
+    // Function to start the iteration
+    function startIteration() {
+        if (currentYear >= endYear) currentYear = startYear;
+        interval = setInterval(() => {
+            if (currentYear >= endYear) {
+                clearInterval(interval);
+                isPlaying = false;
+                document.getElementById('playPauseBtn').textContent = 'Play';
+                return;
+            }
+            updateMap(currentYear, currentMetric);
+            currentYear++;
+            d3.select("#year-display").text(`Year: ${currentYear}`);
+            d3.select("#year-slider").property("value", currentYear);
+        }, 1000);
+    }
+
+    // Play/Pause Button Event Listener
+    document.getElementById('playPauseBtn').addEventListener('click', () => {
+        if (isPlaying) {
+            clearInterval(interval);
+            document.getElementById('playPauseBtn').textContent = 'Play';
+        } else {
+            document.getElementById('playPauseBtn').textContent = 'Pause';
+            startIteration();
+        }
+        isPlaying = !isPlaying;
+    });
+
+    // end dani code
 });
 
 // Tooltip functions
