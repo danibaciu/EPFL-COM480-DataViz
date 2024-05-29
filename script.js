@@ -448,8 +448,62 @@ function showCountryModal(properties, cityData, weatherData) {
     const mapContainer = topContainer.append("div")
         .attr("class", "map-container");
 
+    let isPlaying = false;
+    let interval;
+    let endYear = d3.select("#end-year").node().value;
+    let startYear = d3.select("#start-year").node().value;
+    let currentMetric = "avg_temp_c";
+    let currentYear = startYear;
+    // end play button variables
+
     // Load and display the detailed country map
-    drawCountryMap(properties, mapContainer, cityData, weatherData);
+    const playButton = mapContainer.append("button")
+        .attr("id", "play-button-country")
+        .text("Play")
+        .on("click", function () {
+            if (isPlaying) {
+                clearInterval(interval);
+                document.getElementById('play-button-country').textContent = 'Play';
+            } else {
+                document.getElementById('play-button-country').textContent = 'Pause';
+                startIteration();
+            }
+            isPlaying = !isPlaying;
+        });
+
+    // Append the select element
+    const select = mapContainer.append("select")
+        .attr("id", "country-metric-selector");
+
+    // Append the option elements to the select element
+    select.append("option")
+        .attr("value", "population")
+        .text("Population");
+
+    select.append("option")
+        .attr("value", "gdp")
+        .text("GDP");
+
+    d3.select("#country-metric-selector").on("change", function (event) {
+        currentMetric = this.value;
+    });
+
+    // Function to start the iteration
+    function startIteration() {
+        if (currentYear >= endYear) currentYear = startYear;
+        interval = setInterval(() => {
+            if (currentYear >= endYear) {
+                clearInterval(interval);
+                isPlaying = false;
+                document.getElementById('play-button-country').textContent = 'Play';
+                return;
+            }
+            // todo : update map with new year/metric
+            currentYear++;
+        }, 1000);
+    }
+
+    drawCountryMap(properties, mapContainer, cityData, weatherData, currentYear, currentMetric);
 
     // Bottom section for the plot
     const plotContainer = modal.append("div")
@@ -509,7 +563,7 @@ function showCountryModal(properties, cityData, weatherData) {
     svgContainer.style("filter", "blur(8px)");
 }
 
-function drawCountryMap(properties, container, cityData, weatherData) {
+function drawCountryMap(properties, container, cityData, weatherData, currentYear, currentMetric) {
     const countryName = properties.name.toLowerCase();
     const mapSvg = container.append("svg")
         .attr("width", "100%")
@@ -573,7 +627,8 @@ function drawCountryMap(properties, container, cityData, weatherData) {
         };
 
         var onMouseOver = function (d) {
-            Tooltip.html("City: " + d3.select(this).attr("data-city-name"));
+            // todo : modify value: 10 to the actual value -- get the info from somewhere
+            Tooltip.html("City: " + d3.select(this).attr("data-city-name") + " - Value: 10");
         };
 
         // Append a circle for each city
@@ -598,11 +653,9 @@ function drawCountryMap(properties, container, cityData, weatherData) {
 
         var test = function (d, i){
             const stationData = weatherData.filter(d => d.station_id == countryCities[i].station_id);
+            const yearData = stationData.filter(d => d.date == currentYear);
 
-            // TODO: for now just pick 2018 data
-            const yearData = stationData.filter(d => d.date == "2018");
-
-            var t = yearData[0]["avg_temp_c"]
+            var t = yearData[0][currentMetric]
             var hue = 30 + 240 * (30 - t) / 60;
             return 'hsl(' + [hue, '70%', '50%'] + ')'
         }
