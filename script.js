@@ -613,7 +613,7 @@ function updateCountryMap(properties, container, cityData, weatherData, countryD
     const paddingVert = parseFloat(parentComputedStyle.paddingTop) + parseFloat(parentComputedStyle.paddingBottom);
 
     const effWidth = container.node().clientWidth - paddingHor;
-    const effHeight = container.node().clientHeight - paddingVert;
+    const effHeight = (container.node().clientHeight - paddingVert) * 0.92;
     projection.fitSize([effWidth, effHeight], countryData);
 
     const countryCities = cityData.filter(d => d.country === properties.name);
@@ -691,7 +691,7 @@ function drawCountryMap(properties, container, cityData, countryData) {
     const mapSvg = container.append("svg")
         .attr("id", "indiv-map-svg")
         .attr("width", "100%")
-        .attr("height", "92%");
+        .attr("height", "100%");
 
     const countryCities = cityData.filter(d => d.country === properties.name);
 
@@ -706,7 +706,7 @@ function drawCountryMap(properties, container, cityData, countryData) {
     const paddingVert = parseFloat(parentComputedStyle.paddingTop) + parseFloat(parentComputedStyle.paddingBottom);
 
     const effWidth = container.node().clientWidth - paddingHor;
-    const effHeight = container.node().clientHeight - paddingVert;
+    const effHeight = (container.node().clientHeight - paddingVert) * 0.92;
     projection.fitSize([effWidth, effHeight], countryData);
 
     mapSvg.append("defs").append("clipPath")
