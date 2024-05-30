@@ -591,7 +591,8 @@ function showCountryModal(properties, cityData, weatherData) {
 
         d3.select("#country-metric-selector").on("change", function (event) {
             currentMetric = this.value;
-            currentYear = startYear
+            currentYear = startYear;
+            updateCountryMap(properties, mapContainer, cityData, weatherData, countryData, currentYear, currentMetric);
         });
 
         divMapContainer.append("h4")
