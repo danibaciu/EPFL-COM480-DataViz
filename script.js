@@ -5,7 +5,7 @@ let years = {
     },
     "gdp": {
         "startYear": 2010,
-        "endYear": 2020
+        "endYear": 2018
     }
 }
 
@@ -95,23 +95,6 @@ var colorScale = d3.scaleQuantize()
     .domain([0, 100000000])
     .range(["#ffedea", "#ffcec5", "#ffad9f", "#ff8a75", "#ff5533", "#e2492d", "#be3d26", "#9a311f", "#782618"]);
 
-const zoomInButton = d3.select("body").append("button")
-    .text("+")
-    .attr("class", "zoom-button")
-    .on("click", () => {
-        svgContainer.transition().call(mercatorZoom.scaleBy, 2);
-        svgContainer.transition().call(globeZoom.scaleBy, 2);
-    });
-
-const zoomOutButton = d3.select("body").append("button")
-    .text("-")
-    .attr("class", "zoom-button")
-    .style("left", "60px") // Adjust position
-    .on("click", () => {
-        svgContainer.transition().call(mercatorZoom.scaleBy, 0.5);
-        svgContainer.transition().call(globeZoom.scaleBy, 0.5);
-    });
-
 // Load external data
 Promise.all([
     d3.json("map/world.geojson"),
@@ -184,8 +167,8 @@ Promise.all([
     // play button
     let isPlaying = false;
     let interval;
-    let endYear = years[currentMetric]["endYear"];
-    let startYear = years[currentMetric]["startYear"];
+    let startYear = currentMetric in years ? years[currentMetric]["startYear"] : 2000;
+    let endYear = currentMetric in years ? years[currentMetric]["endYear"] : 2020;
     // end play button variables
 
     function updateColorScale(metric) {
@@ -349,8 +332,8 @@ Promise.all([
     
     d3.select("#metric-selector").on("change", function (event) {
         currentMetric = this.value;
-        endYear = years[currentMetric]["endYear"];
-        startYear = years[currentMetric]["startYear"];
+        startYear = currentMetric in years ? years[currentMetric]["startYear"] : 2000;
+        endYear = currentMetric in years ? years[currentMetric]["endYear"] : 2020;
         updateMap(currentYear, currentMetric);
         updateTreemap(geoData, processedData, countryData, currentMetric, currentYear, treemapCountryCount);
     });
