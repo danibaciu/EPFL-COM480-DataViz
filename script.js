@@ -462,36 +462,49 @@ function showCountryModal(properties, cityData, weatherData) {
     ]).then(function ([countryData]) {
 
         // Load and display the detailed country map
-        const playButton = mapContainer.append("button")
-            .attr("id", "play-button-country")
+        const divMapContainer = mapContainer.append("div")
+                                .attr("id", "divMapContainer")
+                                .style("display", "flex")
+                                .style("justify-content", "flex-end")
+                                .style("align-items","center");
+
+        const playButton = divMapContainer.append("button")
+            .attr("id", "country-play-button")
             .text("Play")
             .on("click", function () {
                 if (isPlaying) {
                     clearInterval(interval);
-                    document.getElementById('play-button-country').textContent = 'Play';
+                    document.getElementById('country-play-button').textContent = 'Play';
                 } else {
-                    document.getElementById('play-button-country').textContent = 'Pause';
+                    document.getElementById('country-play-button').textContent = 'Pause';
                     startIteration();
                 }
                 isPlaying = !isPlaying;
             });
 
         // Append the select element
-        const select = mapContainer.append("select")
-            .attr("id", "country-metric-selector");
+        const select = divMapContainer.append("select")
+            .attr("id", "country-metric-selector")
+            .style("margin-left", "40px");
 
         // Append the option elements to the select element
         select.append("option")
-            .attr("value", "population")
-            .text("Population");
+            .attr("value", "avg_temp_c")
+            .text("Avg Temp");
 
         select.append("option")
-            .attr("value", "gdp")
-            .text("GDP");
+            .attr("value", "avg_temp_c")
+            .text("Avg Temp2"); // todo: modify this
 
         d3.select("#country-metric-selector").on("change", function (event) {
             currentMetric = this.value;
+            currentYear = startYear
         });
+
+        divMapContainer.append("h4")
+            .attr("id", "country-year-display")
+            .style("margin-left", "40px")
+            .text("Current Year: 2000");
 
         // Function to start the iteration
         function startIteration() {
@@ -500,12 +513,13 @@ function showCountryModal(properties, cityData, weatherData) {
                 if (currentYear >= endYear) {
                     clearInterval(interval);
                     isPlaying = false;
-                    document.getElementById('play-button-country').textContent = 'Play';
+                    document.getElementById('country-play-button').textContent = 'Play';
                     return;
                 }
                 // todo : update map with new year/metric
                 currentYear++;
                 updateCountryMap(properties, mapContainer, cityData, weatherData, countryData, currentYear, currentMetric)
+                d3.select("#country-year-display").text(`Current Year: ${currentYear}`);
             }, 1000);
         }
         
