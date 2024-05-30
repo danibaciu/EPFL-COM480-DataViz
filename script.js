@@ -1099,7 +1099,7 @@ function updateTooltipPosition(event, d) {
 
 function showTreemapTooltip(event, d) {
     treemapTooltip.style("display", "block")
-        .html(`<strong>${d.data.name}</strong><br>${d.data.value}`)
+        .html(`<strong>${d.data.name}</strong><br>${formatNumber(d.data.value)}`)
         .style("left", (event.pageX + 10) + "px")
         .style("top", (event.pageY - 20) + "px");
 }
