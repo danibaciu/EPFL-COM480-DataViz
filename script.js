@@ -91,9 +91,26 @@ const sensitivity = 75
 const initialScale = projection.scale()
 
 // Create a scale for the colors
-const colorScale = d3.scaleQuantize()
+var colorScale = d3.scaleQuantize()
     .domain([0, 100000000])
     .range(["#ffedea", "#ffcec5", "#ffad9f", "#ff8a75", "#ff5533", "#e2492d", "#be3d26", "#9a311f", "#782618"]);
+
+const zoomInButton = d3.select("body").append("button")
+    .text("+")
+    .attr("class", "zoom-button")
+    .on("click", () => {
+        svgContainer.transition().call(mercatorZoom.scaleBy, 2);
+        svgContainer.transition().call(globeZoom.scaleBy, 2);
+    });
+
+const zoomOutButton = d3.select("body").append("button")
+    .text("-")
+    .attr("class", "zoom-button")
+    .style("left", "60px") // Adjust position
+    .on("click", () => {
+        svgContainer.transition().call(mercatorZoom.scaleBy, 0.5);
+        svgContainer.transition().call(globeZoom.scaleBy, 0.5);
+    });
 
 // Load external data
 Promise.all([
@@ -101,8 +118,20 @@ Promise.all([
     d3.csv("data/filtered_df.csv"),
     d3.csv("data/cities.csv"),
     d3.csv("data/weather-aggregated.csv"),
-    d3.csv("data/countries.csv")
-]).then(function ([geoData, energyData, cityData, weatherData, countryData]) {
+    d3.csv("data/countries.csv"),
+    d3.csv("data/yearly_country_avg.csv")
+]).then(function ([geoData, energyData, cityData, weatherData, countryData, yearlyCountryAvgData]) {
+    // Process the weather data
+    const processedWeatherData = yearlyCountryAvgData.map(d => ({
+        country: d.country,
+        year: +d.year,
+        avg_temp_c: +d.avg_temp_c,
+        max_temp_c: +d.max_temp_c,
+        min_temp_c: +d.min_temp_c,
+        snow_depth: +d.snow_depth,
+        precipitation_mm: +d.precipitation_mm
+    }));
+
     // Process the energy data
     const processedData = energyData.map(d => ({
         country: d.country,
@@ -159,7 +188,18 @@ Promise.all([
     let startYear = years[currentMetric]["startYear"];
     // end play button variables
 
+    function updateColorScale(metric) {
+        const metricData = processedData.map(d => d[metric]);
+        const minValue = d3.min(metricData);
+        const maxValue = d3.max(metricData);
+
+        colorScale = d3.scaleQuantize()
+            .domain([minValue, maxValue])
+            .range(["#ffedea", "#ffcec5", "#ffad9f", "#ff8a75", "#ff5533", "#e2492d", "#be3d26", "#9a311f", "#782618"]);
+    }
+
     function updateMap(year, metric) {
+        updateColorScale(metric);
         const yearData = processedData.filter(d => d.year === year);
 
         // Join the geo data with the energy data
@@ -182,7 +222,7 @@ Promise.all([
             .style("stroke", "black")
             .on("mouseover", function (event, d) {
                 d3.select(this).style("stroke-width", 2).style("stroke", "orange");
-                showTooltip(event, `${d.properties.name} - ${metric}: ${d.properties[metric] || "N/A"}`);
+                showTooltip(event, `${d.properties.name} - ${metric}: ${formatNumber(d.properties[metric]) || "N/A"}`);
             })
             .on("mouseout", function (event, d) {
                 d3.select(this).style("stroke-width", 1).style("stroke", "black");
@@ -191,6 +231,8 @@ Promise.all([
             .on("click", function (event, d) {
                 showCountryModal(d.properties, cityData, weatherData);
             });
+
+        updateLegend(metric);
     }
     
     // On clicking another projection, adjust the map and selector
@@ -249,6 +291,49 @@ Promise.all([
         setHighlighterWidth();
         previousId = switchId;
     });
+
+    function updateLegend(metric) {
+        d3.select(".legend").remove();
+
+        const legend = svgContainer.append("g")
+            .attr("class", "legend")
+            .attr("transform", `translate(${width - 150}, ${height - 250})`);
+
+        const legendTitle = legend.append("text")
+            .attr("class", "legend-title")
+            .attr("x", 0)
+            .attr("y", -10)
+            .text(metric.toUpperCase());
+
+        const legendScale = d3.scaleLinear()
+            .domain(colorScale.domain())
+            .range([0, 200]);
+
+        const legendAxis = d3.axisRight(legendScale)
+            .tickSize(13)
+            .tickValues(colorScale.domain())
+            .tickFormat(formatNumber);
+
+        legend.append("g")
+            .selectAll("rect")
+            .data(colorScale.range().map((color, i) => {
+                return {
+                    color: color,
+                    value: colorScale.invertExtent(color)[0]
+                };
+            }))
+            .enter()
+            .append("rect")
+            .attr("x", 0)
+            .attr("y", (d, i) => i * 20)
+            .attr("width", 20)
+            .attr("height", 20)
+            .style("fill", d => d.color);
+
+        legend.append("g")
+            .attr("transform", "translate(20, 0)")
+            .call(legendAxis);
+    }
 
     // Call updateMap initially to load the default view
     updateMap(currentYear, currentMetric);
@@ -394,7 +479,7 @@ function showCountryModal(properties, cityData, weatherData) {
         'hydro_share_elec', 'hydro_share_energy', 'low_carbon_share_elec', 'low_carbon_share_energy', 'nuclear_share_elec',
         'nuclear_share_energy', 'oil_share_elec', 'oil_share_energy', 'other_renewables_share_elec', 'other_renewables_share_elec_exc_biofuel',
         'other_renewables_share_energy', 'renewables_share_elec', 'renewables_share_energy', 'solar_share_elec', 'solar_share_energy',
-        'wind_share_elec', 'wind_share_energy'];
+        'wind_share_elec', 'wind_share_energy', 'avg_temp_c', 'max_temp_c', 'min_temp_c', 'snow_depth', 'precipitation_mm'];
 
     features.forEach(feature => {
         featureSelector.append("div")
@@ -538,10 +623,15 @@ function showCountryModal(properties, cityData, weatherData) {
     const plotContainer = modal.append("div")
         .attr("class", "plot-container");
 
-    // Container for plot area
-    plotContainer.append("div").attr("id", "plot-area")
-        .style("width", "100%")
-        .style("height", "calc(100% - 50px)");
+    // Container for line plot area
+    plotContainer.append("div")
+        .attr("id", "line-plot-area")
+        .attr("class", "plot-area");
+
+    // Container for bar plot area
+    plotContainer.append("div")
+        .attr("id", "bar-plot-area")
+        .attr("class", "plot-area");
 
     // Container for the buttons
     const buttonContainer = plotContainer.append("div")
@@ -600,7 +690,11 @@ function getColor(i, countryCities, weatherData, currentYear, currentMetric) {
         return "#ccc";
 
     var t = yearData[0][currentMetric]
-    var hue = 10 + 360 * (30 - t) / 60;
+    var hue;
+    if(currentMetric == "precipitation_mm")
+        hue = 240 * (t / 60)
+    else
+        hue = 10 + 360 * (30 - t) / 60;
     return 'hsl(' + [hue, '70%', '50%'] + ')';
 }
 
@@ -639,8 +733,8 @@ function updateCountryMap(properties, container, cityData, weatherData, countryD
         const stationData = weatherData.filter(d => d.station_id == d3.select(this).attr("station-code"));
         const yearData = stationData.filter(d => d.date == currentYear);
 
-        let value = yearData.length < 1 ? "NaN" : yearData[0][currentMetric];
-        Tooltip.html("City: " + d3.select(this).attr("data-city-name") + " - Value: " + value);
+        let value = parseFloat(yearData.length < 1 ? "NaN" : yearData[0][currentMetric]);
+        Tooltip.html("City: " + d3.select(this).attr("data-city-name") + " - Value: " + value.toFixed(2));
     };
     
     // Update the voronoi diagram
@@ -683,8 +777,6 @@ function updateCountryMap(properties, container, cityData, weatherData, countryD
 
     cityCircles.exit().remove();
 }
-
-
 
 function drawCountryMap(properties, container, cityData, countryData) {
     const countryName = properties.name.toLowerCase();
@@ -740,26 +832,124 @@ function drawCountryMap(properties, container, cityData, countryData) {
 }
 
 function drawPlots(countryName, selectedFeatures, startYear, endYear) {
-    d3.csv("data/filtered_df.csv").then(data => {
-        const countryData = data.filter(d => d.country === countryName && d.year >= startYear && d.year <= endYear);
+    Promise.all([
+        d3.csv("data/filtered_df.csv"),
+        d3.csv("data/yearly_country_avg.csv")
+    ]).then(([energyData, weatherData]) => {
+        const countryEnergyData = energyData.filter(d => d.country === countryName && d.year >= startYear && d.year <= endYear);
+        const countryWeatherData = weatherData.filter(d => d.country === countryName && d.year >= startYear && d.year <= endYear);
+        
+        // Combine energy and weather data
+        const combinedData = countryEnergyData.map(energyEntry => {
+            const weatherEntry = countryWeatherData.find(weatherEntry => weatherEntry.year === energyEntry.year);
+            return { ...energyEntry, ...weatherEntry };
+        });
 
-        const traces = selectedFeatures.map(feature => {
+        // Filter data for years divisible by 5
+        const yearsDivisibleByFive = combinedData.filter(d => d.year % 5 === 0);
+
+        // Line plot traces
+        const lineTraces = selectedFeatures.map(feature => {
             return {
-                x: countryData.map(d => d.year),
-                y: countryData.map(d => +d[feature]),
+                x: combinedData.map(d => d.year),
+                y: combinedData.map(d => +d[feature]),
                 mode: 'lines+markers',
                 name: feature
             };
         });
 
-        const layout = {
+        const lineLayout = {
             title: selectedFeatures.length === 1 ? `${countryName} - ${selectedFeatures[0]}` : `${countryName}`,
             xaxis: { title: 'Year' },
             yaxis: { title: 'Value' },
             margin: { t: 40 }
         };
 
-        Plotly.newPlot('plot-area', traces, layout);
+        Plotly.newPlot('line-plot-area', lineTraces, lineLayout);
+
+        // Prepare data for bar plot
+        const shareElecFeatures = [
+            'biofuel_share_elec', 'coal_share_elec', 'fossil_share_elec', 'gas_share_elec', 'hydro_share_elec',
+            'low_carbon_share_elec', 'nuclear_share_elec', 'oil_share_elec', 'other_renewables_share_elec',
+            'renewables_share_elec', 'solar_share_elec', 'wind_share_elec'
+        ];
+        const shareEnergyFeatures = [
+            'biofuel_share_energy', 'coal_share_energy', 'electricity_share_energy', 'fossil_share_energy',
+            'gas_share_energy', 'hydro_share_energy', 'low_carbon_share_energy', 'nuclear_share_energy',
+            'oil_share_energy', 'other_renewables_share_energy', 'renewables_share_energy', 'solar_share_energy',
+            'wind_share_energy'
+        ];
+
+        const colors = {
+            'biofuel_share_elec': '#1f77b4',
+            'coal_share_elec': '#ff7f0e',
+            'fossil_share_elec': '#2ca02c',
+            'gas_share_elec': '#d62728',
+            'hydro_share_elec': '#9467bd',
+            'low_carbon_share_elec': '#8c564b',
+            'nuclear_share_elec': '#e377c2',
+            'oil_share_elec': '#7f7f7f',
+            'other_renewables_share_elec': '#bcbd22',
+            'renewables_share_elec': '#17becf',
+            'solar_share_elec': '#9edae5',
+            'wind_share_elec': '#aec7e8',
+            'biofuel_share_energy': '#ff9896',
+            'coal_share_energy': '#98df8a',
+            'electricity_share_energy': '#ffbb78',
+            'fossil_share_energy': '#c5b0d5',
+            'gas_share_energy': '#c49c94',
+            'hydro_share_energy': '#f7b6d2',
+            'low_carbon_share_energy': '#c7c7c7',
+            'nuclear_share_energy': '#dbdb8d',
+            'oil_share_energy': '#9edae5',
+            'other_renewables_share_energy': '#17becf',
+            'renewables_share_energy': '#bcbd22',
+            'solar_share_energy': '#8c564b',
+            'wind_share_energy': '#e377c2'
+        };
+
+        const barTraces = [];
+
+        // Creating traces for share_elec and share_energy for each year divisible by 5
+        yearsDivisibleByFive.forEach(yearData => {
+            const year = yearData.year;
+
+            // Create stacked bar for each feature in share_elec
+            shareElecFeatures.forEach(feature => {
+                barTraces.push({
+                    x: [year + '_elec'],
+                    y: [yearData[feature]],
+                    name: feature,
+                    type: 'bar',
+                    marker: { color: colors[feature] }
+                });
+            });
+
+            // Create stacked bar for each feature in share_energy
+            shareEnergyFeatures.forEach(feature => {
+                barTraces.push({
+                    x: [year + '_energy'],
+                    y: [yearData[feature]],
+                    name: feature,
+                    type: 'bar',
+                    marker: { color: colors[feature] }
+                });
+            });
+        });
+
+        const barLayout = {
+            title: `${countryName} - Energy Data`,
+            barmode: 'stack',
+            xaxis: {
+                title: 'Year',
+                tickvals: yearsDivisibleByFive.map(d => d.year).flatMap(year => [year + '_elec', year + '_energy']),
+                ticktext: yearsDivisibleByFive.map(d => d.year).flatMap(year => [year, year])
+            },
+            yaxis: { title: 'Share' },
+            margin: { t: 40 }
+        };
+
+        Plotly.newPlot('bar-plot-area', barTraces, barLayout);
     });
 }
 
@@ -1012,7 +1202,7 @@ function showRefreshPopup() {
     // Container for the top two-thirds section
     const titleContainer = modal.append("div")
         .attr("class", "top-container")
-        .style("text-align", "center");;
+        .style("text-align", "center");
 
     const buttonContainer = modal.append("div")
         .style("text-align", "center");
@@ -1042,4 +1232,11 @@ function showRefreshPopup() {
 
     // Apply the blur effect to the SVG container
     svgContainer.style("filter", "blur(8px)");
+}
+
+function formatNumber(value) {
+    if (value >= 1e9) return (value / 1e9).toFixed(1) + 'B';
+    if (value >= 1e6) return (value / 1e6).toFixed(1) + 'M';
+    if (value >= 1e3) return (value / 1e3).toFixed(1) + 'K';
+    return value;
 }
