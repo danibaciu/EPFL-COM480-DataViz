@@ -508,7 +508,7 @@ function showCountryModal(properties, cityData, weatherData) {
 
         // Function to start the iteration
         function startIteration() {
-            if (currentYear >= endYear) currentYear = startYear;
+            if (currentYear >= endYear) currentYear = startYear - 1;
             interval = setInterval(() => {
                 if (currentYear >= endYear) {
                     clearInterval(interval);
@@ -516,7 +516,6 @@ function showCountryModal(properties, cityData, weatherData) {
                     document.getElementById('country-play-button').textContent = 'Play';
                     return;
                 }
-                // todo : update map with new year/metric
                 currentYear++;
                 updateCountryMap(properties, mapContainer, cityData, weatherData, countryData, currentYear, currentMetric)
                 d3.select("#country-year-display").text(`Current Year: ${currentYear}`);
@@ -684,7 +683,7 @@ function drawCountryMap(properties, container, cityData, countryData) {
     const mapSvg = container.append("svg")
         .attr("id", "indiv-map-svg")
         .attr("width", "100%")
-        .attr("height", "100%");
+        .attr("height", "92%");
 
     const countryCities = cityData.filter(d => d.country === properties.name);
 
