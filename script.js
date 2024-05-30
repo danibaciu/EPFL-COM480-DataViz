@@ -452,7 +452,7 @@ function showCountryModal(properties, cityData, weatherData) {
     let interval;
     let endYear = d3.select("#end-year").node().value;
     let startYear = d3.select("#start-year").node().value;
-    let currentMetric = "avg_temp_c";
+    let currentMetric = "precipitation_mm";
     let currentYear = startYear;
     // end play button variables
 
@@ -489,12 +489,20 @@ function showCountryModal(properties, cityData, weatherData) {
 
         // Append the option elements to the select element
         select.append("option")
+            .attr("value", "precipitation_mm")
+            .text("Precipitation");
+
+        select.append("option")
             .attr("value", "avg_temp_c")
             .text("Avg Temp");
 
         select.append("option")
-            .attr("value", "avg_temp_c")
-            .text("Avg Temp2"); // todo: modify this
+            .attr("value", "max_temp_c")
+            .text("Max Temp");
+        
+        select.append("option")
+            .attr("value", "min_temp_c")
+            .text("Min Temp");
 
         d3.select("#country-metric-selector").on("change", function (event) {
             currentMetric = this.value;
