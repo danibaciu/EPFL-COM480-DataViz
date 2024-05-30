@@ -4,7 +4,7 @@ let years = {
         "endYear": 2020
     },
     "gdp": {
-        "startYear": 2010,
+        "startYear": 2000,
         "endYear": 2018
     }
 }
@@ -853,16 +853,21 @@ function drawPlots(countryName, selectedFeatures, startYear, endYear) {
 
         // Prepare data for bar plot
         const shareElecFeatures = [
-            'biofuel_share_elec', 'coal_share_elec', 'fossil_share_elec', 'gas_share_elec', 'hydro_share_elec',
-            'low_carbon_share_elec', 'nuclear_share_elec', 'oil_share_elec', 'other_renewables_share_elec',
-            'renewables_share_elec', 'solar_share_elec', 'wind_share_elec'
+            'biofuel_share_elec', 'coal_share_elec', 'gas_share_elec', 'hydro_share_elec',
+            'nuclear_share_elec', 'oil_share_elec', 'other_renewables_share_elec',
+            'solar_share_elec', 'wind_share_elec'
         ];
+
+        // 'fossil_share_elec', 'low_carbon_share_elec', 'renewables_share_elec'
+
         const shareEnergyFeatures = [
-            'biofuel_share_energy', 'coal_share_energy', 'electricity_share_energy', 'fossil_share_energy',
-            'gas_share_energy', 'hydro_share_energy', 'low_carbon_share_energy', 'nuclear_share_energy',
-            'oil_share_energy', 'other_renewables_share_energy', 'renewables_share_energy', 'solar_share_energy',
+            'biofuel_share_energy', 'coal_share_energy', 
+            'gas_share_energy', 'hydro_share_energy', 'nuclear_share_energy',
+            'oil_share_energy', 'other_renewables_share_energy', 'solar_share_energy',
             'wind_share_energy'
         ];
+
+        // 'low_carbon_share_energy', 'renewables_share_energy', 'fossil_share_energy','electricity_share_energy', 
 
         const colors = {
             'biofuel_share_elec': '#1f77b4',
