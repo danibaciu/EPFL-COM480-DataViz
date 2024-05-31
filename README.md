@@ -1,10 +1,10 @@
 # Project of COM-480 Data Visualization at EPFL
 
-| Created by | SCIPER |
-| -------------- | ------ |
-| Mohamed Amine Ben Ahmed | 300371 |
-| Daniel-Mihai Baciu | 369808 |
-| Frederik Gerard de Vries | 369939 |
+| Created by | SCIPER | Github |
+| -------------- | ------ | ------ |
+| Mohamed Amine Ben Ahmed | 300371 | [woringer404v](https://github.com/woringer404v) |
+| Daniel-Mihai Baciu | 369808 | [danibaciu](https://github.com/danibaciu) |
+| Frederik Gerard de Vries | 369939 | [rik-devries](https://github.com/rik-devries) |
 
 # [Website : com-480-data-visualization.github.io/DataDrift-Dream-Team/](https://com-480-data-visualization.github.io/DataDrift-Dream-Team/)
 
