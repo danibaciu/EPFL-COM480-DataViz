@@ -965,7 +965,7 @@ function plotFormulas(countryName, formulas, startYear, endYear) {
                 margin: { t: 40 }
             };
 
-            Plotly.newPlot('plot-area', traces, layout);
+            Plotly.newPlot('line-plot-area', traces, layout);
         } catch (error) {
             alert('Error in formula: ' + error.message);
         }
