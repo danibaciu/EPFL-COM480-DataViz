@@ -49,5 +49,9 @@ You can find our second milestone PDF format [Reports/Milestone2.pdf](Reports/Mi
 You can find our process book [Reports/ProcessBook.pdf](Reports/ProcessBook.pdf) and our website [com-480-data-visualization.github.io/DataDrift-Dream-Team/](https://com-480-data-visualization.github.io/DataDrift-Dream-Team/).
 
 ## 📽 Screen cast 📽
-The screencast is available on youtube and marked as unlisted:
+The screencast is available on youtube and marked as unlisted: [youtube.com/watch?v=<yt-code>](https://www.youtube.com/watch?v=<yt-code>)
 
+[![Alt text](https://img.youtube.com/vi/<yt-code>/0.jpg)](https://www.youtube.com/watch?v=<yt-code>)
+
+<!-- --delete me -- example here :  -->
+<!-- [![Alt text](https://img.youtube.com/vi/8jPQjjsBbIc/0.jpg)](https://www.youtube.com/watch?v=8jPQjjsBbIc) -->
