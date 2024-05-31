@@ -1,61 +1,54 @@
-# [Website](https://com-480-data-visualization.github.io/DataDrift-Dream-Team/)
+# Project of COM-480 Data Visualization at EPFL
 
-# Project of Data Visualization (COM-480)
+| Created by | SCIPER | Github |
+| -------------- | ------ | ------ |
+| Mohamed Amine Ben Ahmed | 300371 | [woringer404v](https://github.com/woringer404v) |
+| Daniel-Mihai Baciu | 369808 | [danibaciu](https://github.com/danibaciu) |
+| Frederik Gerard de Vries | 369939 | [rik-devries](https://github.com/rik-devries) |
 
-| Student's name | SCIPER |
-| -------------- | ------ |
-| Mohamed Amine Ben Ahmed | 300371 |
-| Daniel-Mihai Baciu | 369808 |
-| Frederik Gerard de Vries | 369939 |
+# [Website : com-480-data-visualization.github.io/DataDrift-Dream-Team/](https://com-480-data-visualization.github.io/DataDrift-Dream-Team/)
 
-[Milestone 1](#milestone-1) • [Milestone 2](#milestone-2) • [Milestone 3](#milestone-3)
+## 🌎 Abstract 🌎
+The last five decades have witnessed a remarkable era of global transformation, marked by profound shifts in climate patterns, population dynamics, and energy consumption trends. These changes, driven by a confluence of natural processes, human activities, and socio-economic factors, have reshaped our planet’s landscape and profoundly impacted ecosystems, societies, and economies worldwide. Against the backdrop of escalating concerns over climate change, resource depletion, and demographic transitions, understanding the intricate interplay between these interconnected phenomena has emerged as a paramount imperative for sustainable development and collective well-being. In this ambitious endeavor, we embark on a comprehensive exploration of the multifaceted relationships between climate change, population migrations, and energy utilization across nations and regions worldwide. By harnessing extensive datasets spanning diverse temporal and spatial scales, we seek to unravel the underlying dynamics driving these phenomena, identify emerging trends, and illuminate pathways towards fostering resilience, equity, and environmental stewardship in an increasingly interconnected world.
 
-## Milestone 1 (29th March, 5pm)
+## 📊 Dataset 📊
+The datasets underpinning this project constitute a rich and diverse corpus of information, meticulously curated to provide a comprehensive understanding of the complex interdependencies shaping our global trajectory. Here, we present a detailed overview of each dataset, elucidating their sources, scope, temporal coverage, geographic extent, key variables, granularity, and data quality assurance measures:
 
-**10% of the final grade**
+## 👨‍👩‍👧‍👦 Audience 👨‍👩‍👧‍👦
+The visualization tool is designed for everyone, but especially we aim to empower policymakers, researchers, and the general public with the knowledge needed to drive positive change and foster a more sustainable future.
 
-This is a preliminary milestone to let you set up goals for your final project and assess the feasibility of your ideas.
-Please, fill the following sections about your project.
+## 🚀 Project structure & Installation 🚀
 
-*(max. 2000 characters per section)*
+Our project is structured as follows:
 
-### Dataset
+```       
+├───data            (Datasets)
+├───map             (Coordinates regarding countries)
+├───Reports         (Milestone reports)
+└───(---Website files below---)
+    ├───index.html      (HTML code for main webpage)
+    ├───script.js       (Our .js code)
+    └───style.css       (Static CSS code for the website)
+```
 
-> Find a dataset (or multiple) that you will explore. Assess the quality of the data it contains and how much preprocessing / data-cleaning it will require before tackling visualization. We recommend using a standard dataset as this course is not about scraping nor data processing.
->
-> Hint: some good pointers for finding quality publicly available datasets ([Google dataset search](https://datasetsearch.research.google.com/), [Kaggle](https://www.kaggle.com/datasets), [OpenSwissData](https://opendata.swiss/en/), [SNAP](https://snap.stanford.edu/data/) and [FiveThirtyEight](https://data.fivethirtyeight.com/)), you could use also the DataSets proposed by the ENAC (see the Announcements section on Zulip).
+To run our project locally, you need to do:
 
-### Problematic
-
-> Frame the general topic of your visualization and the main axis that you want to develop.
-> - What am I trying to show with my visualization?
-> - Think of an overview for the project, your motivation, and the target audience.
-
-### Exploratory Data Analysis
-
-> Pre-processing of the data set you chose
-> - Show some basic statistics and get insights about the data
-
-### Related work
-
-
-> - What others have already done with the data?
-> - Why is your approach original?
-> - What source of inspiration do you take? Visualizations that you found on other websites or magazines (might be unrelated to your data).
-> - In case you are using a dataset that you have already explored in another context (ML or ADA course, semester project...), you are required to share the report of that work to outline the differences with the submission for this class.
-
-## Milestone 2 (26th April, 5pm)
-
-**10% of the final grade**
+- Clone the repo
+- Move into the folder
+- Start a local server (e.g. using ```python3 -m http.server 8080```), the website is generally available at ```http://127.0.0.1:8080```
 
 
-## Milestone 3 (31st May, 5pm)
+## 📍 Milestones 📍
+**Milestone 1**: Proposals  
+You can find our first milestone in a PDF format [Reports/Milestone1.pdf](Reports/Milestone1.pdf)
 
-**80% of the final grade**
+**Milestone 2**: Sketches and prototype  
+You can find our second milestone PDF format [Reports/Milestone2.pdf](Reports/Milestone2.pdf)
 
+**Milestone 3**: Final project  
+You can find our process book [Reports/ProcessBook.pdf](Reports/ProcessBook.pdf) and our website [com-480-data-visualization.github.io/DataDrift-Dream-Team/](https://com-480-data-visualization.github.io/DataDrift-Dream-Team/).
 
-## Late policy
+## 📽 Screen cast 📽
+The screencast is available on youtube and marked as unlisted: [youtube.com/watch?v=6pHeZgc2nvI](https://www.youtube.com/watch?v=6pHeZgc2nvI)
 
-- < 24h: 80% of the grade for the milestone
-- < 48h: 70% of the grade for the milestone
-
+[![Alt text](https://img.youtube.com/vi/6pHeZgc2nvI/0.jpg)](https://www.youtube.com/watch?v=6pHeZgc2nvI)
