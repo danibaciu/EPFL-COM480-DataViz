@@ -26,9 +26,9 @@ Our project is structured as follows:
 ├───map             (Coordinates regarding countries)
 ├───Reports         (Milestone reports)
 └───(---Website files below---)
-├───index.html      (HTML code for main webpage)
-├───script.js       (Our .js code)
-└───style.css       (Static CSS code for the website)
+    ├───index.html      (HTML code for main webpage)
+    ├───script.js       (Our .js code)
+    └───style.css       (Static CSS code for the website)
 ```
 
 To run our project locally, you need to do:
