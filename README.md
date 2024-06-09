@@ -6,7 +6,7 @@
 | Daniel-Mihai Baciu | 369808 | [danibaciu](https://github.com/danibaciu) |
 | Frederik Gerard de Vries | 369939 | [rik-devries](https://github.com/rik-devries) |
 
-# [Website : com-480-data-visualization.github.io/DataDrift-Dream-Team/](https://com-480-data-visualization.github.io/DataDrift-Dream-Team/)
+# [Website : danibaciu.github.io/EPFL-COM480-DataViz/](https://danibaciu.github.io/EPFL-COM480-DataViz/)
 
 ## 🌎 Abstract 🌎
 The last five decades have witnessed a remarkable era of global transformation, marked by profound shifts in climate patterns, population dynamics, and energy consumption trends. These changes, driven by a confluence of natural processes, human activities, and socio-economic factors, have reshaped our planet’s landscape and profoundly impacted ecosystems, societies, and economies worldwide. Against the backdrop of escalating concerns over climate change, resource depletion, and demographic transitions, understanding the intricate interplay between these interconnected phenomena has emerged as a paramount imperative for sustainable development and collective well-being. In this ambitious endeavor, we embark on a comprehensive exploration of the multifaceted relationships between climate change, population migrations, and energy utilization across nations and regions worldwide. By harnessing extensive datasets spanning diverse temporal and spatial scales, we seek to unravel the underlying dynamics driving these phenomena, identify emerging trends, and illuminate pathways towards fostering resilience, equity, and environmental stewardship in an increasingly interconnected world.
